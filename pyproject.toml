@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fritzfax"
+version = "0.1.22"
+description = "Linux Qt fax client for AVM FRITZ!Box using the box's own HTTP interface"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["PySide6>=6.6", "Pillow>=10.1"]
+
+[project.optional-dependencies]
+keyring = ["keyring>=24"]
+test = ["pytest>=8", "pytest-qt>=4.4"]
+
+[project.scripts]
+fritzfax = "fritzfax.cli:main"
+
+[project.gui-scripts]
+fritzfax-gui = "fritzfax.gui.app:main"
+
+[tool.setuptools.packages.find]
+include = ["fritzfax*"]
+
+[tool.setuptools.package-data]
+"fritzfax.gui" = ["i18n/*.qm", "i18n/*.ts"]
+"fritzfax" = ["data/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "live: talks to a real FRITZ!Box (opt-in via FRITZFAX_LIVE=1)",
+  "live_send: really sends a fax (opt-in via FRITZFAX_LIVE_SEND=<number>)",
+  "office: needs LibreOffice (soffice)",
+]

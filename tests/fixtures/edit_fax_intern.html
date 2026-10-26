@@ -1,0 +1,298 @@
+<style type="text/css">
+.mainContent .formular input[type=text] {
+    width: 17.8rem;
+}
+.mainContent .formular .subheader {
+    margin-top: 1.5rem;
+}
+.mainContent textarea.area {
+    width: 17.8rem;
+    border: 1px solid #b0bec5;
+}
+.mainContent .formular.small_indent {
+    margin-bottom: 1rem;
+}
+#uiTabHeadCall, #uiTabHeadEmail {
+    width: 12.4rem;
+    display: inline-block;
+    font-weight: 600;
+    margin-right: 0.375rem;
+}
+#uiTestArea {
+    margin-top: 0.375rem;
+}
+.path-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 1.5625rem;
+}
+</style>
+
+
+<form id="main_form" method="POST" action="/fon_devices/edit_fax_intern.lua">
+<div class="formular small_indent"><div>Geben Sie an, wie Sie die Faxfunktion verwenden möchten.</div><div><input type="radio" checked value="SendAndReceive" id="uiFaxSendAndReceive" name="faxsendoption"><label for="uiFaxSendAndReceive">Faxe senden und empfangen</label><br><div class="form_checkbox_explain">Sie können sowohl Faxe senden, als auch empfangen. Die ausgewählten Rufnummern sind für eingehende Telefonate nicht nutzbar.</div></div><div><input type="radio" value="OnlySend" id="uiFaxOnlySend" name="faxsendoption"><label for="uiFaxOnlySend">Faxe nur senden</label><br><div class="form_checkbox_explain">Sie können weiterhin über die ausgewählten Rufnummern telefonieren, aber keine Faxe empfangen.</div></div></div><div class="formular small_indent"><div style="display:none;"><p>Aktivieren Sie die automatische Fax-Erkennung, um über Ihre Festnetzrufnummer sowohl zu telefonieren als auch Faxe zu empfangen. Zusätzlich erkennt der integrierte Anrufbeantworter ankommende Faxe automatisch.</p></div><div style="display:none;"><p><input id="uiViewFaxSwitch" type="checkbox" name="fax_switch"><label for="uiViewFaxSwitch">automatische Fax-Erkennung für  (Festnetz)</label></p></div></div><div class="formular small_indent"><div>Wählen Sie die Rufnummern aus, die mit der Faxfunktion verwendet werden sollen.</div><input type="checkbox" id="uiNum_1" name="num_1" value="12345678" checked><label for="uiNum_1">12345678</label><br></div><div class="formular small_indent"><hr><div><h4>Faxversand</h4><p>Die nachfolgenden Einstellungen benötigt die FRITZ!Box, um Faxe empfangen und verschicken zu können.</p><label for="uiViewHeadline">Kopfzeile Faxkennung</label><input type="text" name="headline" id="uiViewHeadline" maxlength="40" value="TestKennung"><br><label for="uiViewHeadline_from">Kopfzeile Absender (kurz)</label><input type="text" name="from_headline" id="uiViewHeadline_from" maxlength="40" value="TestShort"><br><label for="uiView_from_name" class="top">Absender</label><textarea class = "area"  cols = "27"  rows="3"  maxlength = "200"  id = "uiView_from_name"  name = "from_name">Test Sender</textarea></div></div><div class="formular small_indent"><hr><h4>Faxempfang</h4><p>Faxdokumente können per E-Mail weitergeleitet und/oder auf einem Speicher abgelegt werden.</p><div class=""><div class=""><input id="uiActivate" type="checkbox" name="email_send" checked><label for="uiActivate">per E-Mail weiterleiten</label></div>            <div id="uiViewTab" class="formular widetext">
+                <label for="uiMailType">an die E-Mail-Adresse</label>
+                <select id="uiMailType" name="mail_type">
+                    <option value="default" selected >user@example.org</option>
+                    <option value="custom"  >Andere E-Mail-Adresse</option>
+                </select>
+                <div id="uiCustomRecipient" style="display:none;">
+                    <label for="uiViewAddr"></label>
+                    <input type="text" id="uiViewAddr" name="fax_addr" value="">
+                    <fos-icon id="uiRecipientHint" name="i_circle" color="blue-100" size="xl" area="5xl"></fos-icon>
+                    <fos-popover trigger="uiRecipientHint" title="Push-Service-Mail an mehrere E-Mail-Adressen gleichzeitig senden?">
+                        Tragen Sie dazu alle gewünschten Adressen in das Textfeld ein und trennen Sie diese mit einem Komma voneinander.
+                    </fos-popover>
+                </div>
+            </div>
+        <div><div class="subheader">Speicherort festlegen</div><p><input type="radio" value="no" id="uiViewDontSaveFax" name="fax_save"><label for="uiViewDontSaveFax">nicht ablegen</label></p><p><input type="radio" checked value="intern" id="uiViewFaxInternalMem" name="fax_save"><label for="uiViewFaxInternalMem">intern ablegen</label></p><p><input type="radio" disabled value="usbOther" id="uiUsbDeviceOther" class="usb-device" name="fax_save"><label for="uiUsbDeviceOther">auf beliebigen USB-Speicher unter /FRITZ/faxbox ablegen</label></p><input id="faxSavePath" type="hidden" name="fax_save_path" value=""></div></div></div><div id="btn_form_foot"><input value="/fon_devices/fondevices_list.lua" type="hidden" name="back_to_page"><button type="submit" name="button_cancel" class="normal">Abbrechen</button><button type="submit" name="apply" class="recommended">OK</button></div>
+</form>
+<input id="oldPageXhrSid" type="hidden" value="SIDPLACEHOLDER0"><input id="fdhidedata" type="hidden" value="{&quot;shareUsb&quot;:true,&quot;dectMoni&quot;:true,&quot;dectRdio&quot;:true,&quot;dectMoniEx&quot;:true,&quot;rss&quot;:true,&quot;ssoSet&quot;:true,&quot;dectMail&quot;:true,&quot;rrd&quot;:true,&quot;mobile&quot;:true,&quot;liveImg&quot;:true}"><input id="oldpageactive" type="hidden" value="/fon_devices/edit_fax_intern.lua"><input id="oldPageTimeTillLogout" type="hidden" value="1200"><input id="oldpageMenu" type="hidden" value="/fon_devices/fondevices_list.lua"><input id="oldPageTitle" type="hidden" value="Einstellungen zur Faxfunktion"><input id="gHelpPage" type="hidden" value="hilfe_fon_faxintern_1.html"><div id="domReady" style="display:none"></div>
+
+<script type="module">
+import "/components/TextInput/TextInput.js";
+import CollapsibleSection from "/components/CollapsibleSection/CollapsibleSection.js";
+import ModalView from "../components/ModalView/ModalView.js";
+import RadioButton from "../components/RadioButton/RadioButton.js";
+import FileSystem from "../components/FileSystem/FileSystem.js";
+import { h } from "../utils/dom.js";
+
+var data = {"allIds":[{"id":"uiNum_1","num":"12345678","type":"sip"}],"potsConfiguredFax":false,"potsConfigured":false,"countIncomingNums":1,"checkedNums":"1","savePath":"","faxSwitch":false,"pushserviceConfigured":true,"usbDiskMissing":true};
+var g_max_selectable_nums = 10;
+function uiDoOnActivateChecked() {
+    var is_checked = jsl.getChecked("uiActivate");
+    jsl.disableNode("uiViewTab", !is_checked);
+}
+function GetPotsId() {
+    for (var i = 0; i < data.allIds.length; i++) {
+        if (data.allIds[i].type === "pots") {
+            return data.allIds[i].id;
+        }
+    }
+    return "";
+}
+function OnFaxSwitch(is_checked) {
+    if (!data.potsConfigured) {
+        return;
+    }
+    const PotsId = GetPotsId()
+    jsl.setDisabled(PotsId, is_checked);
+    if (is_checked) {
+        jsl.setChecked(PotsId, false);
+    } else {
+        jsl.setChecked(PotsId, data.potsConfiguredFax);
+    }
+}
+function OnCheckNum(obj) {
+    if (obj.checked) {
+        if (data.checkedNums >= g_max_selectable_nums) {
+          alert("Es können maximal 10 Rufnummern konfiguriert werden.");
+          return false;
+        }
+        if (!jsl.getChecked("uiFaxOnlySend")) {
+            const msg = "Wenn Sie diese Rufnummer für den Faxempfang aktivieren, können keine Telefongespräche mehr über die Rufnummer angenommen werden. Sind Sie sicher, dass Sie fortfahren möchten? Bitte beachten: die Faxfunktion benötigt die Zuordnung einer eigenen Rufnummer.";
+            if (!confirm(msg)) {
+                return false;
+            }
+        }
+        data.checkedNums++;
+    } else {
+        data.checkedNums--;
+    }
+    return true;
+}
+function initProgressTracker() {
+    wizProgressTracker.init({
+        wizards: data.wizards,
+        active: "wizardPhone",
+        abort: wizard.abortWizard.bind(null, "main_form"),
+        gotoWiz: wizard.goToWizard.bind(null, "main_form"),
+        finishUrl: data.servicecenterUrl
+    });
+    wizProgressTracker.create();
+}
+function showPathContainer(evt) {
+    const target = evt.currentTarget;
+    const idx = target.dataset.idx;
+    const id = idx ? "uiPathContainer" + idx : null;
+    const containers = jsl.find(".path-container");
+    containers.forEach(container => {
+        if (id && container.id === id) {
+            container.show();
+        } else {
+            container.hide();
+        }
+    });
+    const path = id ? jsl.get("uiEditUsbPath" + idx).dataset.path : "";
+    jsl.setValue("faxSavePath", path);
+}
+const DEFAULT_PATH = "/FRITZ/faxbox";
+let setDir;
+function showDirSelection(evt) {
+    const target = evt.currentTarget;
+    const source = target.dataset.source;
+    const idx = target.dataset.idx;
+    const path = target.dataset.path;
+    initDirOverlay(source, path);
+    setDir = (newPath) => {
+        let visiblePath, storagePath;
+        if (newPath === DEFAULT_PATH) {
+            storagePath = source + newPath;
+            visiblePath = newPath;
+        } else {
+            storagePath = newPath;
+            visiblePath = newPath.substring(source.length);
+        }
+        jsl.setValue("uiFullUsbPath" + idx, visiblePath);
+        jsl.get("uiEditUsbPath" + idx).dataset.path = storagePath;
+        jsl.setValue("faxSavePath", storagePath);
+        main.triggerInputChanges();
+    };
+    jsl.get("dirSelection").show();
+}
+function createDirSelection() {
+    let buttonDefault, buttonManual, coll, fs;
+    const updateButtons = () => {
+        modalview.buttons = [
+            {
+                action: "apply",
+                is: "primary-button",
+                content: "OK",
+                disabled: buttonManual.checked && !fs.value
+            }
+        ];
+    };
+    const modalview = h(ModalView, {
+        "id": "dirSelection",
+        "class": "dir-selection",
+        "label": "Speicherort festlegen",
+        "header": "Speicher Verzeichnis für Faxe wählen",
+        "max-width": "40",
+        "onApply": () => {
+            setDir(buttonDefault.checked ? DEFAULT_PATH : fs.value);
+        }
+    }, [
+        h("p", null, "Wählen Sie das Verzeichnis, das für die Faxe verwendet werden soll."),
+        h("div", { class: "default-or-manual" }, [
+            (buttonDefault = h(RadioButton, {
+                "name": "defaultOrManual",
+                "value": DEFAULT_PATH,
+                "label": "Automatisch unter \"/FRITZ/faxbox\" speichern",
+                "no-watch": true,
+                "onChange": () => {
+                    coll.value = false;
+                    updateButtons();
+                }
+            })),
+            (buttonManual = h(RadioButton, {
+                "name": "defaultOrManual",
+                "value": "",
+                "label": "Verzeichnis auswählen",
+                "no-watch": true,
+                "onChange": () => {
+                    coll.value = true;
+                    updateButtons();
+                }
+            }))
+        ]),
+        (coll = h(CollapsibleSection, {
+            id: "fsWrapper"
+        }, (fs = h(FileSystem, {
+            id: "fs",
+            name: "url",
+            fetchContent: getDirSelectionData,
+            onChange: () => {
+                updateButtons();
+            }
+        }))))
+    ]);
+    jsl.get("content").append(modalview);
+}
+function getDirSelectionData(path = "/") {
+    return fetch("data.lua", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: new URLSearchParams({
+            sid: main.sid,
+            page: main.currentPid,
+            dirSelect: "1",
+            path: path
+        })
+    }).then(response => response.json()).then(function (res) {
+        const data = res.data;
+        const dataArray = [];
+        for (const key in data) {
+            if (data.hasOwnProperty(key) && !isNaN(Number(key))) {
+                dataArray.push(data[key]);
+            }
+        }
+        return dataArray;
+    });
+}
+function initDirOverlay(source, path) {
+    const dirSelection = jsl.get("dirSelection");
+    if (dirSelection) {
+        const fsWrapper = jsl.get("fsWrapper");
+        const fs = jsl.get("fs");
+        const isDefault = path === (source + DEFAULT_PATH);
+        jsl.find("radio-button[name=defaultOrManual]").forEach((btn) => {
+            if (btn.value === "" && !isDefault) {
+                btn.checked = true;
+                fsWrapper.value = true;
+                fs.value = path;
+            } else if (btn.value === DEFAULT_PATH && isDefault) {
+                btn.checked = true;
+                fsWrapper.value = false;
+                fs.value = null;
+            }
+        });
+        fs.rootPath = source;
+    }
+}
+function onChangePushMailType(value, counter) {
+    jsl.display("uiCustomRecipient" + (counter || "").toString(), value === "custom");
+}
+function init() {
+    try { wizard.init() } catch (e) {}
+    createDirSelection();
+    if (data.potsConfigured) {
+        const PotsId = GetPotsId()
+        if (data.faxSwitch) {
+            jsl.setChecked(PotsId, false);
+        }
+        jsl.setDisabled(PotsId, data.faxSwitch);
+    }
+    jsl.disableNode("uiUsbDevice", data.usbDiskMissing);
+    jsl.disableNode("uiViewTab", !jsl.getChecked("uiActivate"));
+    jsl.addEventhandlerForModuleUsage([
+        { id: "uiViewFaxSwitch", event: "click", func: (evt) => OnFaxSwitch(evt.target.checked) },
+        { name: "fax_save", event: "change", func: (evt) => showPathContainer(evt) },
+        { id: "uiActivate", event: "click", func: uiDoOnActivateChecked},
+    ]);
+    if (data.countIncomingNums <= 1) {
+        jsl.addEventhandlerForModuleUsage([
+            { id: "uiMailType", event: "change", func: evt => onChangePushMailType(evt.currentTarget.value)}
+        ]);
+    } else {
+        for (let i = 1; i <= data.countIncomingNums; i++) {
+            jsl.addEventhandlerForModuleUsage([
+                { id: "uiMailType"+i, event: "change", func: evt => onChangePushMailType(evt.currentTarget.value, i)}
+            ]);
+        }
+    }
+    document.querySelectorAll(".edit-usb-path").forEach(btn =>
+        btn.addEventListener("click", evt => showDirSelection(evt)));
+    if (data.wiztype === "first") {
+        initProgressTracker();
+    }
+    newval.init({
+        pid: "edit_fax_intern",
+        oldpage: "/fon_devices/edit_fax_intern.lua"
+    });
+    newval.addSubmitHandler({ name: "apply" });
+}
+ready.onReady(init);
+</script>

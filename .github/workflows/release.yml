@@ -1,0 +1,75 @@
+# Windows and macOS packages: test, build with PyInstaller, run the built program's self test, upload.
+# Linux packages are built by dist.sh (AlmaLinux 9 container, glibc 2.34) and tools/dist_test.sh.
+# Actions are pinned to commits, not to tags that can be moved.
+name: release
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            target: windows-x86_64
+          - os: macos-14
+            target: macos-arm64
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: dependencies
+        run: python -m pip install --disable-pip-version-check -r tools/requirements-build.txt
+      - name: tests
+        run: python -m pytest -q -p no:cacheprovider tests/unit tests/integration tests/gui
+      - name: build
+        run: python -m PyInstaller --noconfirm --clean --log-level WARN tools/fritzfax.spec
+      - name: self test of the built program (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          dist/fritzfax/fritzfax.exe --version
+          dist/fritzfax/fritzfax.exe selftest
+          QT_QPA_PLATFORM=windows dist/fritzfax/fritzfax.exe selftest --gui
+      - name: self test of the built program (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          dist/fritzfax.app/Contents/MacOS/fritzfax --version
+          dist/fritzfax.app/Contents/MacOS/fritzfax selftest
+          QT_QPA_PLATFORM=cocoa dist/fritzfax.app/Contents/MacOS/fritzfax selftest --gui
+      - name: package
+        shell: bash
+        run: |
+          version=$(cat VERSION)
+          name="fritzfax-${version}-${{ matrix.target }}"
+          mkdir -p out
+          if [ "$RUNNER_OS" = Windows ]; then
+            cp tools/package/README-windows.txt dist/fritzfax/README.txt
+            cp LICENSE dist/fritzfax/LICENSE.txt
+            python tools/collect_licenses.py dist/fritzfax/LICENSES --all
+            (cd dist && 7z a -tzip -mx=9 "../out/$name.zip" fritzfax >/dev/null)
+          else
+            cp tools/package/README-macos.txt dist/README.txt
+            cp LICENSE dist/LICENSE.txt
+            python tools/collect_licenses.py dist/LICENSES --all
+            (cd dist && ditto -c -k --sequesterRsrc --keepParent fritzfax.app "../out/$name.zip" &&
+             zip -q -r "../out/$name.zip" README.txt LICENSE.txt LICENSES)
+          fi
+          (cd out && shasum -a 256 "$name.zip" > "$name.zip.sha256" 2>/dev/null || sha256sum "$name.zip" > "$name.zip.sha256")
+          ls -l out
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: fritzfax-${{ matrix.target }}
+          path: out/*
+          if-no-files-found: error

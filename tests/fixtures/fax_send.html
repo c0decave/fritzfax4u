@@ -1,0 +1,441 @@
+<style type="text/css">
+  .row {
+    padding-top: 0.3125rem;
+    padding-bottom: 0.3125rem;
+  }
+  .wait_progress {
+    float: right;
+    margin-right: 0.625rem;
+  }
+  .left_and_right {
+    clear: both;
+  }
+  .mainContent .formular .left_and_right input,
+  .mainContent .formular .left_and_right textarea {
+    width: 95%;
+    max-width: 38.5rem;
+  }
+  .mainContent .formular label {
+    width: 8.625rem;
+    vertical-align: top;
+  }
+  .mainContent .formular input,
+  .mainContent .formular select,
+  .mainContent textarea {
+    width: 14.375rem;
+  }
+  #uiCanvasDiv {
+    display: none;
+  }
+  #uiDate{
+    font-size: 0.92rem;
+  }
+  .btn_align {
+    display: inline-block;
+    vertical-align: middle;
+  }
+  .thumb {
+    height: 4.6875rem;
+    border: 1px solid #000000;
+    margin: 0.625rem 0.3125rem 0 0;
+  }
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .left,
+  .right {
+    padding: 0.25rem;
+  }
+  .mainContent button.icon {
+    margin: 0;
+  }
+  .icon.fonbook img {
+    width: 1rem;
+    padding-top: 0.25rem;
+  }
+  @media (max-width: 25em) {
+    .mainContent .formular input,
+    .mainContent .formular select,
+    .mainContent textarea {
+      width: 95%;
+    }
+  }
+</style>
+
+
+
+<form name="main_form" method="POST" action="/fon_devices/fax_send.lua" >
+  <input type="submit" value="" style="position:absolute;top:-9999px;left:-9999px;" name="btn_send" id="defaultSubmitBtn">
+  <div class="formular" style="display:none;" >
+        <p>
+          Die FRITZ!Box stellt Ihnen eine integrierte Faxfunktion zur Verfügung. Empfangene Faxnachrichten werden automatisch an Ihre E-Mail-Adresse weitergeleitet. Für den Faxversand per Browser wählen Sie den Empfänger aus Ihrem Telefonbuch aus, geben die Nachricht als Text ein und fügen auf Wunsch ein Bild mit an.
+        </p>
+        <p class="innerbutton"><a href="/assis/assi_fax_intern.lua?New_DeviceTyp=IntFax&HTMLConfigAssiTyp=FonOnly&Submit_Next=&FonAssiFromPage=fax_send">Faxfunktion einrichten</a>        </p>
+      </div>
+      <div id="uiFaxBlock1" style="" >
+        <div class="formular container" >
+          <div class="left">
+            <div><div class=""><label for="uiViewDest">Telefonbuch</label><select name="fonbooks" id="uiFonbooks"><option value="manu" selected="selected">Manuelle Eingabe</option></select><br><label for="uiViewDest">An</label><select id="uiFonbook" name="fonbook" style="display:none"><option value="choose" selected="selected">Bitte wählen...</option></select><input type="text" name="dest_name" id="uiViewDest" maxlength="40" size="30"></div>            </div>
+            <div>
+              <label for="uiViewDestNum">
+                Faxnummer
+              </label><input type="text" size="30" maxlength="40" id="uiViewDestNum" name="dest_num" value="" >            </div>
+          </div>
+          <div class="right">
+            <div>
+              <label for="uiViewFrom1">
+                Absender
+              </label><textarea cols="22" rows="3" maxlength="250" id="uiViewFrom1" name="from1">Test Sender</textarea>
+            </div>
+            <div>
+              <label for="uiViewsSendFrom">senden mit</label><select name="src_num" id="uiViewFromNum"><option value="12345678">12345678</option></select>            </div>
+            <div>
+              <label for="uiDate">
+                Datum
+              </label><input type="text" size="30" maxlength="40" id="uiDate" name="from_num" value="Sonntag, 25. Oktober 2026 16:52:14" disabled>
+            </div>
+          </div>
+        </div>
+        <div class="clear_float"></div>
+        <hr>
+        <div class="formular">
+          <div class="row">
+            <div class="left_and_right">
+              <label for="uiViewSubject">
+                Betreff
+              </label><input type="text" size="30" maxlength="40" id="uiViewSubject" name="subject" value="">
+            </div>
+          </div>
+          <div class="row">
+            <div class="left_and_right">
+              <label for="uiViewFaxText">
+                Text
+              </label><textarea cols="74" rows="20" maxlength="" id="uiViewFaxText" name="fax_text"></textarea>
+              <div id="uiCanvasDiv"><canvas  id="uiCanvasContain" width="1728" height="2444"></canvas></div>
+            </div>
+          </div>
+          <div id="uiProgress" class="wait_progress">
+            &nbsp;
+          </div>
+          <div class="row" id="uiFileAttachment">
+            <div class="left_and_right">
+              <p>
+                <output id="uiThumbList"></output>
+              </p>
+              <label for="uiFile">
+                Dateianhang
+              </label><input type="file" id="uiFile" size="70" accept="image/*">
+            </div>
+          </div>
+        </div>
+        <div class="clear_float"></div>      </div>
+      <div id="uiFaxBlock2" style="display:none;" >
+        <div  class="formular">
+          <p class="txt_center" id="uiView_FaxWaitText">Bitte warten...</p>
+          <p class="waitimg"><img id="uiImage" src="/assets/animations/anim_waitBarBlue.gif"></p>
+          <p class="txt_center" id="uiView_FaxState" >&nbsp;</p>
+        </div>
+      </div>
+      <div id="uiContinueBox" class="btn_form" style="display:none">
+        <button type="submit" name="btn_continue" id="btnContinue">Weiter</button>
+      </div>
+      <div class="btn_form">
+        <div style="">
+          <button type="submit" name="btn_cancel">Abbrechen</button>
+          <button type="submit" name="btn_send" id="btnSave">Senden</button>
+        </div>
+      </div>
+      
+</form>
+<input id="oldPageXhrSid" type="hidden" value="SIDPLACEHOLDER0"><input id="fdhidedata" type="hidden" value="{&quot;shareUsb&quot;:true,&quot;dectMoni&quot;:true,&quot;dectRdio&quot;:true,&quot;dectMoniEx&quot;:true,&quot;rss&quot;:true,&quot;ssoSet&quot;:true,&quot;dectMail&quot;:true,&quot;rrd&quot;:true,&quot;mobile&quot;:true,&quot;liveImg&quot;:true}"><input id="oldpageactive" type="hidden" value="/fon_devices/fax_send.lua"><input id="oldPageTimeTillLogout" type="hidden" value="1200"><input id="oldPageTitle" type="hidden" value="Fax senden"><div id="domReady" style="display:none"></div>
+
+<link rel="stylesheet" type="text/css" href="/css/default/static.css"/>
+<script type="module">
+import { CreateFaxPage, initTxt2canvas, OnChangeFileSel, DeInitFaxPages } from "/js/text2canvas.js"
+var g_pbe=[];
+var g_mode="fax_write";
+var g_max_poll=200;
+var g_count=0;
+var g_keep=0;
+var g_show_fonbook=false;
+var g_old_progress = 0;
+var sid = "SIDPLACEHOLDER0";
+function OnBlur()
+{
+  jsl.show("uiViewDest");
+  jsl.setSelection("uiFonbook","choose");
+  jsl.setSelection("uiFonbooks","manu");
+  jsl.hide("uiFonbook");
+}
+function OnChangeFonbook(fonbook_id)
+{
+    jsl.clearAllOptions("uiFonbook", ["choose"]);
+    if (fonbook_id=="manu")
+    {
+        jsl.setValue("uiViewDestNum","");
+        jsl.setValue("uiViewDest","");
+        jsl.setDisabled("uiViewDest",false);
+        jsl.show("uiViewDest");
+        jsl.hide("uiFonbook");
+    } else {
+        g_pbe[fonbook_id].forEach(function (entry) {
+            jsl.addOption("uiFonbook", entry.number, entry.name)
+        });
+        jsl.setValue("uiViewDestNum","");
+        jsl.display("uiFonbook",true);
+        jsl.display("uiViewDest",false);
+    }
+}
+function OnChange(elem)
+{
+  if (elem.value=="choose")
+  {
+    return;
+    }
+    jsl.setValue("uiViewDestNum",elem.value);
+    jsl.setValue("uiViewDest",elem.options[elem.selectedIndex].text);
+    jsl.setSelection("uiFonbooks","manu");
+  jsl.show("uiViewDest");
+  jsl.setSelection("uiFonbook","choose");
+  jsl.hide("uiFonbook");
+}
+var keyStr = "ABCDEFGHIJKLMNOP" +
+             "QRSTUVWXYZabcdef" +
+             "ghijklmnopqrstuv" +
+             "wxyz0123456789+/" +
+             "=";
+function encode64(input) {
+  var str=""
+  for (var i=0;i<input.length;i++)
+  {
+    str += String.fromCharCode(input[i]);
+  }
+  input=str
+  var output = "";
+  var chr1, chr2, chr3 = "";
+  var enc1, enc2, enc3, enc4 = "";
+  var i = 0;
+  var input_as_str=input;
+  do {
+    chr1 = input.charCodeAt(i++);
+    chr2 = input.charCodeAt(i++);
+    chr3 = input.charCodeAt(i++);
+    enc1 = chr1 >> 2;
+    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+    enc4 = chr3 & 63;
+    if (isNaN(chr2)) {
+       enc3 = enc4 = 64;
+    } else if (isNaN(chr3)) {
+       enc4 = 64;
+    }
+    output = output +
+       keyStr.charAt(enc1) +
+       keyStr.charAt(enc2) +
+       keyStr.charAt(enc3) +
+       keyStr.charAt(enc4);
+    chr1 = chr2 = chr3 = "";
+    enc1 = enc2 = enc3 = enc4 = "";
+  } while (i < input.length);
+   return output;
+}
+function cbKeepAlive(response)
+{
+  var go_on=g_count<g_max_poll;
+  if (response && response.status == 200)
+  {
+    var wait = new Array("-","/","-","\\");
+    jsl.setText("uiProgress",wait[g_keep%4]);
+    g_keep++;
+  }
+  if (g_keep<10)
+  {
+    oldPage.setTimeout(KeepAlive, 1000);
+  }
+}
+function KeepAlive()
+{
+  var my_url = "/fon_devices/fax_send.lua?sid=" + sid + "&myXhr=1&query=KeepAlive";
+  ajaxGet(my_url, cbKeepAlive);
+}
+function onNumEditSubmit(data)
+{
+  data = data || {};
+  var tfaNeeded = true;
+  if (tfaNeeded && data.needs2FA) {
+    twofactor.startAndRun(function () {
+      create_fax();
+    });
+    return false;
+  }
+  g_old_progress = 0;
+  return create_fax();
+}
+function create_fax() {
+  jsl.disable("btnContinue");
+  var data={};
+  data.dest_name = jsl.getValue("uiViewDest");
+  data.dest_fax  = jsl.getValue("uiViewDestNum");
+  data.dest_tel  = "+++";//jsl.getValue("---");
+  data.from_name = jsl.getValue("uiViewFrom1");
+  data.from_fax  = jsl.getValue("uiViewFromNum");
+  data.from_num  = "###";//jsl.getValue("---");
+  var d=new Date;
+  data.date       = d.toLocaleString();
+  data.shortdate  = d.toLocaleDateString();
+  data.identifier = "TestKennung";
+  data.send_short = "TestShort";
+  data.subject    = jsl.getValue("uiViewSubject");
+  data.text       = jsl.getValue("uiViewFaxText");
+  var SffFile = CreateFaxPage("uiCanvasContain",data);
+  jsl.hide("uiFaxBlock1")
+  jsl.show("uiFaxBlock2")
+  function faxError(text) {
+    jsl.changeImage("uiImage","/assets/elements/elem_barRed.gif");
+    jsl.setText("uiView_FaxState", text);
+    jsl.show("uiContinueBox");
+    jsl.enable("btnContinue");
+  }
+  if (!SffFile) {
+    faxError("Konvertierung des Faxes ist fehlgeschlagen.");
+    return false;
+  }
+  const formData = new FormData();
+  formData.append("sid", sid);
+  formData.append("NumDest", data.dest_fax);
+  formData.append("NumSrc", data.from_fax);
+  formData.append("FaxUploadFile", encode64(SffFile));
+  const onerror = () => faxError("Der Faxversand ist gescheitert.");
+  const onload = () => {
+    if (xhr.responseText.indexOf("progress") >= 0) {
+      jsl.changeImage("uiImage","/assets/elements/elem_barGreen.gif");
+      jsl.setText("uiView_FaxState", "Der Faxversand wurde erfolgreich gestartet.");
+      setTimeout(() => main.changePage(null, "fax", false, { progress: "start" }), 2000);
+    } else {
+      onerror();
+    }
+  };
+  const xhr = new XMLHttpRequest();
+  xhr.addEventListener("load", onload, false);
+  xhr.upload.addEventListener("error", onerror, false);
+  xhr.upload.addEventListener("abort", onerror, false);
+  xhr.open("POST", "/cgi-bin/firmwarecfg");
+  xhr.send(formData);
+  return false;
+}
+function cbRefresh(response)
+{
+  var err_txt="Es ist ein Fehler aufgetreten.";
+  var go_on=g_count<g_max_poll;
+  if (response && response.status == 200)
+  {
+    var faxinfo=JSON.parse(response.responseText || "null");
+    if (!go_on)
+    {
+      faxinfo.status=-2;
+    }
+    switch (faxinfo.status)
+    {
+      case -2:
+        jsl.changeImage("uiImage","/assets/elements/elem_barRed.gif");
+        jsl.setText("uiView_FaxWaitText",err_txt);
+        jsl.setText("uiView_FaxState","Timeout erreicht.");
+        go_on=false;
+        break;
+      case -1:
+      case 0:
+        jsl.changeImage("uiImage","/assets/elements/elem_barRed.gif");
+        jsl.setText("uiView_FaxWaitText",err_txt);
+        jsl.setText("uiView_FaxState","Fax-Funktion steht nicht zur Verfügung.");
+        go_on=false;
+        break;
+      case 5:
+      case 1:
+        if (faxinfo.reason != 0) {
+          jsl.changeImage("uiImage","/assets/elements/elem_barRed.gif");
+          var link = "<a target='_blank' href='" + "\x2fhelp\x2fhelp.lua\x3fhelppage\x3dhilfe\x5fcapi\x5f" + faxinfo.reason.toString(16) + ".html'>";
+          var Linktxt = jsl.sprintf("Der Sendevorgang ist gescheitert(0x%1%ReasonInHex%). %2%Linkstart%weitere Informationen%3%Linkend%", faxinfo.reason.toString(16), link, "</a>");
+          jsl.setHtml("uiView_FaxWaitText", Linktxt);
+        } else {
+          jsl.changeImage("uiImage","/assets/elements/elem_barGreen.gif");
+          jsl.setText("uiView_FaxWaitText","Der Sendevorgang wurde erfolgreich abgeschlossen.");
+        }
+        jsl.setText("uiView_FaxState","");
+        go_on=false;
+        break;
+      case 2:
+      case 3:
+        jsl.changeImage("uiImage","/assets/animations/anim_waitBarBlue.gif");
+        jsl.setText("uiView_FaxWaitText","Verbindungsaufbau");
+        jsl.setText("uiView_FaxState","");
+        break;
+      case 4:
+        jsl.changeImage("uiImage","/assets/animations/anim_waitBarBlue.gif");
+        jsl.setText("uiView_FaxWaitText","Daten werden übertragen...");
+        var cur=jsl.sprintf("Datenübertragung bei %1%Prozent%%.",faxinfo.progress);
+        jsl.setText("uiView_FaxState",cur);
+        if (faxinfo.progress != g_old_progress) {
+          jsl.log("Next Step restart counter", g_old_progress, faxinfo.progress);
+          g_old_progress = faxinfo.progress;
+          g_count = 0;
+        } else {
+          jsl.log("no progress", g_count);
+        }
+        break;
+    }
+  }
+  if (go_on)
+  {
+    oldPage.setTimeout(GetFaxState, 1000);
+  }
+  else
+  {
+    DeInitFaxPages();
+    jsl.enable("btnContinue");
+  }
+}
+function GetFaxState()
+{
+  g_count++;
+  var url = encodeURI( "/fon_devices/fax_send.lua" );
+  url = addUrlParam( url, "sid", sid);
+  url = addUrlParam( url, "no_sidrenew", 1 );
+  url = addUrlParam( url, "myXhr", 1 );
+  url = addUrlParam( url, "query", "refresh" );
+  ajaxGet( url, cbRefresh );
+}
+function init() {
+  newval.init({
+    pid: "fax",
+    oldpage: "fon_devices/fax_send.lua"
+  });
+  if (window.File && window.FileReader && window.FileList && window.Blob) {
+  } else {
+    jsl.display("uiFileAttachment",false);
+  }
+  if (g_mode=="fax_progress") {
+    jsl.disable("btnContinue");
+    oldPage.setTimeout(GetFaxState, 500);
+  } else {
+    var d = new Date();
+    try {
+      jsl.setText( "uiDate", d.toLocaleString() );
+    } catch ( e ) {}
+    initTxt2canvas("uiCanvasContain","uiCanvasDiv");
+    jsl.addEventHandler("uiFile", "change", OnChangeFileSel);
+  }
+  jsl.addEventhandlerForModuleUsage([
+    { id: "uiFonbooks", event: "change", func: (evt) => OnChangeFonbook(evt.target.value) },
+    { id: "uiFonbook", event: "change", func: (evt) => OnChange(evt.target) },
+    { id: "uiFonbook", event: "blur", func: (evt) => OnBlur(evt.target) }
+  ]);
+}
+newval.addSubmitHandler({
+  name: "btn_send",
+  onAfterSubmit: onNumEditSubmit
+});
+ready.onReady(init);
+</script>
+

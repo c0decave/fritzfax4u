@@ -1,0 +1,6 @@
+sep=;
+Typ;Datum;Name;Rufnummer;Landes-/Ortsnetzbereich;Nebenstelle;Eigene Rufnummer;Dauer
+1;25.10.26 17:21;;04087654321;Hamburg;Fax (intern/PC);Internet: 12345678;0:01
+4;25.10.26 17:21;;04087654321;;Fax (intern/PC);12345678;0:01
+4;25.10.26 17:08;;053149059113;;Fax (intern/PC);12345678;0:01
+1;25.10.26 17:06;;04087654321;Hamburg;Fax (intern/PC);Internet: 12345678;0:00

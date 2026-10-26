@@ -1,0 +1,13 @@
+Qt and Qt for Python (PySide6, shiboken6)
+==========================================
+
+This package contains Qt 6 and Qt for Python (PySide6 and shiboken6) in the version named in
+fritzfax's tools/requirements-build.txt (6.11.1), unmodified, as separate shared libraries.
+They are licensed under the GNU Lesser General Public License version 3 (LGPL-3.0-only, see
+LGPL-3.0.txt, which refers to GPL-3.0.txt). Copyright (C) The Qt Company Ltd. and other contributors.
+
+Source code: https://download.qt.io/official_releases/QtForPython/pyside6/PySide6-6.11.1-src/
+             https://download.qt.io/official_releases/qt/
+The libraries are separate files in this package (Linux: fritzfax/_internal, Windows:
+fritzfax\_internal, macOS: fritzfax.app/Contents/Frameworks) and can be replaced by other builds of
+the same version.

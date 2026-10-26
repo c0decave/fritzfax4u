@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+out/
+.coverage
+out/
+.private-words
+dist/
+.cache/

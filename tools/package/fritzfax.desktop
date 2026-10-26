@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=fritzfax
+GenericName=Fax
+GenericName[de]=Fax
+Comment=Send faxes through an AVM FRITZ!Box
+Comment[de]=Faxe über eine AVM FRITZ!Box senden
+Exec=fritzfax-gui %F
+Icon=printer
+Terminal=false
+Categories=Office;Network;
+MimeType=application/pdf;image/png;image/jpeg;image/tiff;

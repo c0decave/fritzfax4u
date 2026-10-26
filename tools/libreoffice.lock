@@ -1,0 +1,6 @@
+# LibreOffice bundled with the full release package (headless conversion of office documents).
+# Official AppImage from appimages.libreitalia.org (linked from libreoffice.org/download/appimage).
+# sha256 pinned on first download 2026-10-25 (server md5 0cc087e7dead7b3c165ded52c0ff56aa matched).
+name=LibreOffice-26.8.1.1.basic-x86_64.AppImage
+url=https://appimages.libreitalia.org/LibreOffice-26.8.1.1.basic-x86_64.AppImage
+sha256=bccf75d0bf9bff86ed62b3676c2514da902019b5ce701c006b2f9062a82068ff
