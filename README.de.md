@@ -14,20 +14,27 @@ TCP** (deshalb funktionieren Roger Router & Co. nicht mehr) und kein SIP-Konto. 
 ## Funktionen
 
 * **Das Dokument ist das Fax.** Eine einseitige PDF wird als einseitiges Fax gesendet, ohne
-  erzwungenes Anschreiben. Brieftext, Deckblatt und Kopfzeile sind optional.
+  erzwungenes Anschreiben. Brieftext, Deckblatt und Header-Zeile sind optional.
 * PDF, Bilder (auch mehrseitige TIFF) und Office-Dokumente (mit LibreOffice).
 * Eine Vorschau genau der Seiten, die gesendet werden. Einzelne Seiten entfernen Sie mit Entf oder
   per Rechtsklick.
 * Mehrere Empfänger nacheinander; Nummern dürfen als `0531 49059113`, `0531-49059113` oder
   `+49 (0)531 49059113` geschrieben werden. Die eigenen Nummern der Box erscheinen als `+49 30 …`.
+* Die Faxnummer auf dem Fax (Header-Zeile, Deckblatt) darf von der Nummer abweichen, mit der die Box
+  sendet, etwa die Nummer für Antworten (Einstellungen → Absender oder `--shown-number`).
+* Ein Adressbuch (Namen und Faxnummern, SQLite): Empfänger daraus wählen oder einfach einen Namen ins
+  Empfängerfeld schreiben. Das Sendeprotokoll zeigt die Namen der Empfänger und alle Faxe an einen
+  von ihnen.
 * Bestätigung per zweitem Faktor (Taste an der Box, `*1<Code>`, Authenticator).
 * **Jedes Fax wird mit den eigenen Aufzeichnungen der Box geprüft**: Endstatus, Eintrag im
   Fax-Journal, die Kopie der Seiten in der Box (bitgenau verglichen) und die Anrufliste. Ein
   lokales Sendeprotokoll hält fest, wann, an wen, mit welchem Inhalt und mit welchem Ergebnis
   gesendet wurde, mit PDF-Kopie und Sendebericht.
 * Dauert ein Gespräch länger als erwartet, wartet fritzfax auf das Ergebnis der Box, statt zu raten.
-* TLS-Zertifikat wird gepinnt; das Passwort liegt im System-Keyring (nur wenn Sie das Häkchen
-  setzen), nie in der Einstellungsdatei. Keine eingebaute Box-Adresse, keine Telemetrie.
+* TLS-Zertifikat wird gepinnt. Das Passwort wird nur gespeichert, wenn Sie das Häkchen setzen: im
+  System-Keyring oder, wo es keinen gibt, in der Einstellungsdatei (Dateirechte 600, nur Ihr
+  Benutzerkonto kann sie lesen; base64-kodiert, das ist keine Verschlüsselung). Keine eingebaute
+  Box-Adresse, keine Telemetrie.
 * Helles, dunkles oder System-Theme; ein (?) neben jeder Einstellung erklärt sie. Verbindet sich beim Start.
 * Optional (standardmäßig aus): eine Animation mit Faxgeräusch und Fanfare beim Senden.
 
@@ -81,16 +88,20 @@ fritzfax --help                 # Kommandozeile
 
 ```sh
 fritzfax trust                                   # Zertifikat der Box pinnen (erneut, wenn die Box es erneuert hat)
-fritzfax set-password                            # Passwort in den Keyring (oder FRITZFAX_PASSWORD)
+fritzfax set-password                            # Passwort speichern (Keyring, sonst Einstellungsdatei; oder FRITZFAX_PASSWORD)
 fritzfax info
 fritzfax send --to "0531 49059113" brief.pdf     # die PDF-Seiten sind das Fax
 fritzfax send --to "030 1234567, 040 7654321" --text "Hallo" --subject "Antrag" --cover anlage.pdf
 fritzfax send --to 0301234567 --dry-run --out vorschau/ brief.pdf
 fritzfax journal [--download ID --out fax.pdf] [--delete ID]
+fritzfax contacts [SUCHE] [--add "Muster GmbH" "0531 49059113"] [--delete ID]
+fritzfax send --to "Muster GmbH" brief.pdf        # ein Name aus dem Adressbuch
+fritzfax log [--to "Muster GmbH"]                # gesendete Faxe, an alle oder an einen Empfänger
 fritzfax boxconfig [--identifier X --header Y --email a@b.de --no-email-forward]
 ```
 
-Einstellungen und Sendeprotokoll: `~/.config/fritzfax` und `~/.local/share/fritzfax` unter Linux,
+Einstellungen, Sendeprotokoll und Adressbuch (`addressbook.db`), nur für Ihr Benutzerkonto lesbar:
+`~/.config/fritzfax` und `~/.local/share/fritzfax` unter Linux,
 `%APPDATA%\fritzfax` und `%LOCALAPPDATA%\fritzfax` unter Windows, `~/Library/Application Support/fritzfax` unter macOS.
 
 ## Entwicklung

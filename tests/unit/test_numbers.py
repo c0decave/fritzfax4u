@@ -134,3 +134,38 @@ def test_international_numbers_are_recognized():
     assert is_international("00431234567") is True
     assert is_international("0301234567") is False
     assert is_international("87654321") is False
+
+
+# --- the fax number printed on the fax (operator 2026-10-26: it may differ from the sending one) --------
+
+from fritzfax.core.numbers import printed_number, shown_number  # noqa: E402
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("+49 30 1234567", "+49 30 1234567"),
+    ("  030 / 123-4567 ", "030 / 123-4567"),
+    ("+49 (0)30   1234567", "+49 (0)30 1234567"),  # inner runs of spaces become one
+    ("", ""),
+    ("   ", ""),
+])
+def test_shown_number_accepts_how_people_write_numbers(raw, expected):
+    assert shown_number(raw) == expected
+
+
+@pytest.mark.parametrize("raw, kind", [
+    ("Fax office", "invalid"),
+    ("12", "invalid"),            # fewer than three digits is no fax number
+    ("030 123+4567", "invalid"),  # + only at the start
+    ("1" * 41, "too_long"),
+])
+def test_shown_number_rejects_what_is_no_number(raw, kind):
+    with pytest.raises(InvalidNumber) as exc:
+        shown_number(raw)
+    assert exc.value.kind == kind
+
+
+def test_printed_number_prefers_the_chosen_number():
+    assert printed_number("+49 40 999999", "87654321", ("49", "30")) == "+49 40 999999"
+    assert printed_number("", "87654321", ("49", "30")) == "+49 30 87654321"  # the sending number, international
+    assert printed_number("", "87654321", None) == "87654321"
+    assert printed_number("", "", None) == ""

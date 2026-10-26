@@ -17,7 +17,7 @@ TABLE = json.loads((ROOT / "tools" / "i18n_de.json").read_text(encoding="utf-8")
 # The fields that must carry a (?) - a help button that disappears is a regression.
 SETTINGS_KEYS = {
     "box_url", "username", "keyring", "certificate", "timeout",
-    "sender_name", "sender_number", "country_code",
+    "sender_name", "sender_number", "shown_number", "country_code",
     "mode", "cover", "header", "dither", "max_pages", "start_timeout", "stall_timeout",
     "soffice", "font",
     "box_identifier", "box_header", "box_sender", "box_email", "box_store", "box_send_only",

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fritzfax"
-version = "0.1.22"
+version = "0.1.25"
 description = "Linux Qt fax client for AVM FRITZ!Box using the box's own HTTP interface"
 readme = "README.md"
 requires-python = ">=3.11"

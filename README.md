@@ -18,13 +18,19 @@ fritzfax uses the same HTTP protocol as the box's own web interface. It needs **
 * A preview of exactly the pages that are sent. Remove single pages with Del or a right click.
 * Several destination numbers, sent one after another; numbers may be written as `0531 49059113`,
   `0531-49059113` or `+49 (0)531 49059113`. The box's own numbers are shown as `+49 30 …`.
+* The fax number printed on the fax (header line, cover sheet) can differ from the number the box
+  sends from, e.g. the number replies should go to (Settings → Sender, or `--shown-number`).
+* An address book (names and fax numbers, SQLite): pick recipients from it, or simply type a name
+  into the recipient field. The send log shows the recipients' names and every fax sent to one of
+  them.
 * Second-factor confirmation (button on the box, `*1<code>`, authenticator).
 * **Every fax is checked with the box's own records**: final status, fax journal entry, the box's
   copy of the pages (compared bit for bit) and the call list. A local send log keeps when, to whom,
   which content and that result, with a PDF copy and a transmission report.
 * If a call takes longer than expected, fritzfax waits for the box's own result instead of guessing.
-* TLS certificate pinning; the password in the system keyring (only if you tick it), never in the
-  settings file. No built-in box address, no telemetry.
+* TLS certificate pinning. The password is saved only if you tick it: in the system keyring, or,
+  where there is none, in the settings file (file mode 600, only your user account can read it;
+  base64 encoded, which is not encryption). No built-in box address, no telemetry.
 * Light, dark or system theme; a (?) next to every setting explains it. Connects at start.
 * Optional (off by default): an animation with fax sound and fanfare while a fax is sent.
 
@@ -78,16 +84,20 @@ fritzfax --help                 # command line
 
 ```sh
 fritzfax trust                                   # pin the box certificate (again after the box renewed it)
-fritzfax set-password                            # the password in the keyring (or FRITZFAX_PASSWORD)
+fritzfax set-password                            # save the password (keyring, else settings file; or FRITZFAX_PASSWORD)
 fritzfax info
 fritzfax send --to "0531 49059113" letter.pdf    # the PDF pages are the fax
 fritzfax send --to "030 1234567, 040 7654321" --text "Hello" --subject "Request" --cover appendix.pdf
 fritzfax send --to 0301234567 --dry-run --out preview/ letter.pdf
 fritzfax journal [--download ID --out fax.pdf] [--delete ID]
+fritzfax contacts [SEARCH] [--add "Muster GmbH" "0531 49059113"] [--delete ID]
+fritzfax send --to "Muster GmbH" letter.pdf       # a name from the address book
+fritzfax log [--to "Muster GmbH"]                # sent faxes, to everybody or to one recipient
 fritzfax boxconfig [--identifier X --header Y --email a@b.de --no-email-forward]
 ```
 
-Settings and send log: `~/.config/fritzfax` and `~/.local/share/fritzfax` on Linux,
+Settings, send log and address book (`addressbook.db`), readable only by your user account:
+`~/.config/fritzfax` and `~/.local/share/fritzfax` on Linux,
 `%APPDATA%\fritzfax` and `%LOCALAPPDATA%\fritzfax` on Windows, `~/Library/Application Support/fritzfax` on macOS.
 
 ## Development

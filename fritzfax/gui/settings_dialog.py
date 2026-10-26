@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..core import boxconfig, config, faxapi
+from ..core import boxconfig, config, faxapi, numbers
 from ..core.errors import BoxError
 from ..core.numbers import box_number_display
 from ..core.session import BoxClient
@@ -80,7 +80,7 @@ class SettingsDialog(QDialog):
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText(self.tr("unchanged"))
         f.addRow(self.tr("Password:"), self.password_edit)
-        self.keyring_check = QCheckBox(self.tr("Store the password in the system keyring"))
+        self.keyring_check = QCheckBox(self.tr("Save the password"))
         self.keyring_check.setChecked(True)
         f.addRow("", with_help(self, "keyring", self.keyring_check))
         self.cert_label = QLabel(s.cert_sha256 or self.tr("(not trusted yet)"))
@@ -111,6 +111,10 @@ class SettingsDialog(QDialog):
         self.sender_number_edit = QLineEdit(s.sender_number)
         self.sender_number_edit.setPlaceholderText(self.tr("empty = first fax number of the box"))
         f.addRow(self.tr("Default sender number:"), with_help(self, "sender_number", self.sender_number_edit))
+        self.shown_number_edit = QLineEdit(s.shown_number)
+        self.shown_number_edit.setMaxLength(numbers.MAX_LEN + 10)  # room for spaces that save() tidies away
+        self.shown_number_edit.setPlaceholderText(self.tr("empty = the number the fax is sent from"))
+        f.addRow(self.tr("Fax number on the fax:"), with_help(self, "shown_number", self.shown_number_edit))
         self.country_edit = QLineEdit(f"+{s.country_code}")  # written with + like everywhere
         self.country_edit.setMaxLength(6)
         f.addRow(self.tr("Own country code:"), with_help(self, "country_code", self.country_edit))
@@ -423,6 +427,14 @@ class SettingsDialog(QDialog):
                 .replace("%1", self.country_edit.text().strip()))
             self.country_edit.setFocus()
             return
+        try:
+            shown = numbers.shown_number(self.shown_number_edit.text())
+        except numbers.InvalidNumber as exc:
+            self._show_tab_of(self.shown_number_edit)
+            QMessageBox.warning(self, self.tr("Fax number on the fax"), connection.describe_number_error(exc))
+            self.shown_number_edit.setFocus()
+            return
+        s.shown_number = shown
         s.box_url, s.username, s.cert_sha256, s.timeout = new.box_url, new.username, new.cert_sha256, new.timeout
         s.sender_name = self.sender_name_edit.text().strip()
         s.sender_number = self.sender_number_edit.text().strip()
@@ -447,14 +459,13 @@ class SettingsDialog(QDialog):
         if self.password_edit.text():
             s.password = self.password_edit.text()
             if self.keyring_check.isChecked():
-                try:
-                    config.set_password(s, s.password)
-                except Exception as exc:  # noqa: BLE001 - no keyring, or the wallet stayed locked
-                    QMessageBox.information(self, self.tr("Password"), connection.keyring_failed(exc))
+                if config.set_password(s, s.password) == "file":
+                    QMessageBox.information(self, self.tr("Password"), connection.saved_in_file(self.config_path))
             else:
-                config.delete_password(s)  # "not in the keyring" means: not there any more either
+                config.delete_password(s)  # "not saved" means: not there any more either
         elif account_changed:
             s.password = None  # the password of the old box or user must not go to the new one
+            s.saved_password = s.saved_password_for = ""
         try:
             config.save(s, self.config_path)
         except OSError as exc:

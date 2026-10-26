@@ -203,6 +203,27 @@ def test_wrong_password_is_asked_again_and_not_stored(qtbot, tmp_path, fakebox, 
     assert list(kr.stored.values()) == [fakebox.state.password]  # stored once the box accepted it
 
 
+def test_without_keyring_the_password_is_asked_once_and_not_on_the_next_start(qtbot, tmp_path, fakebox,
+                                                                               monkeypatch, shown):
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    asked = []
+    monkeypatch.setattr(connection, "ask_password",
+                        lambda parent, user: asked.append(1) or (fakebox.state.password, True))
+    conf = tmp_path / "f.conf"
+    s = config.Settings(box_url=fakebox.url, username=fakebox.state.username, poll_interval=0.02)
+    w = MainWindow(s, conf)
+    qtbot.addWidget(w)
+    w.connect_box()
+    qtbot.waitUntil(lambda: w.box_info is not None, timeout=15000)
+    assert asked == [1]
+    w2 = MainWindow(config.load(conf), conf)  # the next start
+    qtbot.addWidget(w2)
+    w2.connect_box()
+    qtbot.waitUntil(lambda: w2.box_info is not None, timeout=15000)
+    assert asked == [1]  # no second prompt
+
+
 def test_rejected_keyring_password_leads_to_a_new_prompt(qtbot, tmp_path, fakebox, monkeypatch, shown):
     s = config.Settings(box_url=fakebox.url, username=fakebox.state.username, poll_interval=0.02)
     kr = FakeKeyring({config._account(s): "old-and-wrong"})

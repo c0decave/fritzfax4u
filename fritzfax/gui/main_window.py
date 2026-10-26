@@ -1,6 +1,8 @@
 """Main window: destinations, sender, mode, files, preview, send."""
 from __future__ import annotations
 
+import re
+import sqlite3
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -12,6 +14,7 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -40,13 +43,13 @@ from .. import __version__
 from ..core import boxconfig, config, faxapi, job, render
 from ..core.errors import FaxResultUnknown, LoginBlocked, LoginFailed, UntrustedCertificate
 from ..core.history import FAX_DPI, History
+from ..core.addressbook import AddressBook, resolve
 from ..core.numbers import (
     InvalidNumber,
     box_number_display,
-    international_display,
     is_international,
     looks_local_without_area_code,
-    parse_destinations,
+    printed_number,
 )
 from . import connection, theme
 from .helptip import with_help
@@ -55,6 +58,7 @@ from .twofa_dialog import TwoFactorDialog
 from .workers import SendEvents, run_async, wait_all
 
 FILE_FILTER_EXT = sorted(render.SUPPORTED_EXTENSIONS)
+MENU_CONTACTS = 25  # address book entries in the "Numbers..." menu; the rest in the address book window
 
 
 def _connection_key(s: config.Settings) -> tuple:
@@ -112,6 +116,7 @@ class MainWindow(QMainWindow):
         self.connecting = False  # a login is running; a second one on the same client would collide
         self.send_client = None  # the client a running send uses (self.client may be replaced meanwhile)
         self.password_rejected = False  # ask for a new password instead of using the stored one
+        self._book: AddressBook | None = None  # see address_book()
         self.reset_client_after_send = False  # connection settings changed during a send
         self.send_after_connect = False  # "send" was clicked while a login was running
         self.celebration = None  # the send animation of the running send (Settings - Interface)
@@ -305,6 +310,9 @@ class MainWindow(QMainWindow):
         act = QAction(self.tr("Add files..."), self, shortcut=QKeySequence.StandardKey.Open)
         act.triggered.connect(self.choose_files)
         file_menu.addAction(act)
+        act = QAction(self.tr("Address book..."), self)
+        act.triggered.connect(self.open_address_book)
+        file_menu.addAction(act)
         act = QAction(self.tr("Export preview..."), self)
         act.triggered.connect(self.export_preview)
         file_menu.addAction(act)
@@ -402,15 +410,63 @@ class MainWindow(QMainWindow):
                 for e in entries or []:
                     a = sub.addAction(f"{e.get('name', '')}  ({e.get('number', '')})")
                     a.triggered.connect(lambda _=False, n=e.get("number", ""), nm=e.get("name", ""): self._add_number(n, nm))
+        book = self.address_book(quiet=True)
+        contacts = book.contacts() if book else []
+        self.to_menu.addSection(self.tr("Address book"))
+        for c in contacts[:MENU_CONTACTS]:
+            a = self.to_menu.addAction(f"{c.name}  ({c.number})")
+            a.triggered.connect(lambda _=False, c=c: self._add_number(c.number, c.name))
+        self.to_menu.addAction(self.tr("Address book...") if len(contacts) <= MENU_CONTACTS else
+                               self.tr("More in the address book...")).triggered.connect(self.open_address_book)
+        self.to_menu.addAction(self.tr("Save recipient in address book...")).triggered.connect(self.save_recipient)
         recent = self.settings.recent_numbers
         if recent:
             self.to_menu.addSection(self.tr("Recent numbers"))
             for n in recent:
                 a = self.to_menu.addAction(n)
                 a.triggered.connect(lambda _=False, n=n: self._add_number(n))
-        if self.to_menu.isEmpty():
-            a = self.to_menu.addAction(self.tr("No phone book entries (connect to the box first)"))
+        if not (self.box_info and self.box_info.phonebook):
+            a = self.to_menu.addAction(self.tr("The phone books of the box appear here once connected"))
             a.setEnabled(False)
+
+    # --- address book ----------------------------------------------------------------------
+    def address_book(self, quiet: bool = False) -> AddressBook | None:
+        """The address book (addressbook.db next to the send log); None if it cannot be opened."""
+        if self._book is None or self._book.country_code != self.settings.country_code:
+            try:
+                self._book = AddressBook(country_code=self.settings.country_code)
+            except (OSError, sqlite3.Error) as exc:
+                if not quiet:
+                    QMessageBox.warning(self, self.tr("Address book"), self.tr(
+                        "The address book cannot be opened: %1").replace("%1", str(exc)))
+                return None
+        return self._book
+
+    def open_address_book(self):
+        from .addressbook_dialog import AddressBookDialog
+
+        book = self.address_book()
+        if book is None:
+            return
+        dlg = AddressBookDialog(book, self, choose=True)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            for c in dlg.chosen:
+                self._add_number(c.number, c.name)
+
+    def save_recipient(self):
+        """Keep the number in the recipient field (and the recipient name) in the address book."""
+        from .addressbook_dialog import ContactDialog
+
+        book = self.address_book()
+        if book is None:
+            return
+        entries = [e.strip() for e in re.split(r"[,;\n]+", self.to_edit.text()) if e.strip()]
+        ContactDialog(book, self, name=self.to_name_edit.text().strip(),
+                      number=entries[0] if len(entries) == 1 else "").exec()
+
+    def destinations(self) -> list[str]:
+        """The numbers in the recipient field, names from the address book resolved; InvalidNumber if bad."""
+        return resolve(self.to_edit.text(), self.settings.country_code, self.address_book(quiet=True))
 
     def _add_number(self, number: str, name: str = ""):
         text = self.to_edit.text().strip().rstrip(",")
@@ -424,7 +480,7 @@ class MainWindow(QMainWindow):
             self._set_hint(self.to_hint, "")
             return
         try:
-            numbers = parse_destinations(text, self.settings.country_code)
+            numbers = self.destinations()
         except InvalidNumber as exc:
             self._set_hint(self.to_hint, connection.describe_number_error(exc))
             return
@@ -522,19 +578,21 @@ class MainWindow(QMainWindow):
         return self.from_number_combo.currentData() or self.settings.sender_number
 
     def header_number(self) -> str:
-        """The sender number as printed in the header line: international form when known."""
-        number = self.sender_number()
-        if not self.box_location:
-            return number
-        return international_display(number, *self.box_location)
+        """The fax number printed on the fax (header line, cover sheet): the one chosen in the settings,
+        else the sending number, in international form when known."""
+        return printed_number(self.settings.shown_number, self.sender_number(), self.box_location)
 
     def build_document(self) -> render.Document:
         s = self.settings
         letter = self.mode_letter.isChecked()
         cover = None
         if self.cover_check.isChecked():
-            cover = render.Cover(to_name=self.to_name_edit.text(), to_number=self.to_edit.text(),
-                                 from_name=self.from_name_edit.text(), from_number=self.sender_number(),
+            try:  # names from the address book as their numbers
+                to_number = ", ".join(self.destinations())
+            except InvalidNumber:
+                to_number = self.to_edit.text()
+            cover = render.Cover(to_name=self.to_name_edit.text(), to_number=to_number,
+                                 from_name=self.from_name_edit.text(), from_number=self.header_number(),
                                  subject=self.subject_edit.text(), date=time.strftime("%d.%m.%Y %H:%M"),
                                  labels=render.cover_labels(self.language))
         return render.Document(files=self.file_specs(), text=self.text_edit.toPlainText() if letter else "",
@@ -765,7 +823,8 @@ class MainWindow(QMainWindow):
             if client is not self.client:  # the settings changed meanwhile: this login is outdated
                 self.auto_connect()  # now with the new settings
                 return
-            connection.store_pending_password(self.settings, self)
+            if connection.store_pending_password(self.settings, self, self.config_path):
+                self._save_settings()  # the password may be in them now
             self._set_chip("connected")
             info, self.box_location = result
             self.box_info = info
@@ -814,7 +873,7 @@ class MainWindow(QMainWindow):
         if self.sending:
             return
         try:
-            numbers = parse_destinations(self.to_edit.text(), self.settings.country_code)
+            numbers = self.destinations()
         except InvalidNumber as exc:
             QMessageBox.warning(self, self.tr("Recipient"), connection.describe_number_error(exc))
             return
@@ -1008,7 +1067,7 @@ class MainWindow(QMainWindow):
     def open_history(self):
         from .journal_dialog import HistoryDialog
 
-        HistoryDialog(History(), self).exec()
+        HistoryDialog(History(), self, book=self.address_book(quiet=True)).exec()
 
     def about(self):
         QMessageBox.about(self, self.tr("About fritzfax"),

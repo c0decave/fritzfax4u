@@ -11,15 +11,17 @@ from pathlib import Path
 from . import __version__
 from .core import boxconfig, config, faxapi, journal, render, twofactor
 from .core import job as jobmod
+from .core.addressbook import AddressBook, InvalidContact, resolve
 from .core.errors import BoxError, BoxNotConfigured, FaxResultUnknown, UntrustedCertificate
 from .core.history import History
 from .core.numbers import (
     InvalidNumber,
     box_number_display,
-    international_display,
     is_international,
     looks_local_without_area_code,
-    parse_destinations,
+    normalize_number,
+    printed_number,
+    shown_number,
 )
 from .core.render.office import OfficeUnavailable
 from .core.session import BoxClient
@@ -42,7 +44,7 @@ def _client(args, s: config.Settings) -> BoxClient:
     password = config.get_password(s)
     if password is None:
         if not sys.stdin.isatty():
-            raise SystemExit("no password: set FRITZFAX_PASSWORD or store it in the keyring (fritzfax set-password)")
+            raise SystemExit("no password: set FRITZFAX_PASSWORD or save it (fritzfax set-password)")
         password = getpass.getpass(f"Password for {s.username or 'the box'} at {s.box_url}: ")
     return BoxClient(s.box_url, s.username, password, cert_sha256=s.cert_sha256 or None,
                      trust_unknown_cert=getattr(args, "trust", False), timeout=s.timeout)
@@ -77,7 +79,8 @@ def _document(args, s: config.Settings) -> render.Document:
     cover = None
     if args.cover if args.cover is not None else s.cover:
         cover = render.Cover(to_name=args.to_name or "", to_number=", ".join(args.to or []),
-                             from_name=args.from_name or s.sender_name, from_number=args.from_number or s.sender_number,
+                             from_name=args.from_name or s.sender_name,
+                             from_number=_shown(args, s) or args.from_number or s.sender_number,
                              subject=args.subject or "", message=args.cover_text or "",
                              date=time.strftime("%d.%m.%Y %H:%M"), labels=render.cover_labels(s.language))
     return render.Document(files=files, text=text, subject=args.subject if text else "", cover=cover,
@@ -152,23 +155,29 @@ def cmd_info(args, s):
     return EXIT_OK
 
 
+def _shown(args, s) -> str:
+    """The fax number to print instead of the sending one ("" = the sending one); InvalidNumber if bad."""
+    return shown_number(args.shown_number if args.shown_number is not None else s.shown_number)
+
+
 def cmd_preview(args, s):
     prepared = jobmod.prepare(_document(args, s), sender_name=args.from_name or s.sender_name,
-                              sender_number=args.from_number or s.sender_number)
+                              sender_number=args.from_number or s.sender_number, display_number=_shown(args, s) or None)
     _write_preview(prepared, Path(args.out))
     return EXIT_OK
 
 
 def cmd_send(args, s):
     try:
-        destinations = parse_destinations(",".join(args.to), s.country_code)
+        destinations = resolve(",".join(args.to), s.country_code, AddressBook(country_code=s.country_code))
+        shown = _shown(args, s)
     except InvalidNumber as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_USAGE
     sender_name = args.from_name or s.sender_name
     if args.dry_run:
         prepared = jobmod.prepare(_document(args, s), sender_name=sender_name,
-                                  sender_number=args.from_number or s.sender_number)
+                                  sender_number=args.from_number or s.sender_number, display_number=shown or None)
         _write_preview(prepared, Path(args.out or "fritzfax-preview"))
         print(f"dry run: would send {prepared.page_count} page(s) to {', '.join(destinations)}")
         return EXIT_OK
@@ -179,9 +188,9 @@ def cmd_send(args, s):
     sender_number = args.from_number or s.sender_number or info.src_numbers[0]
     try:
         location = boxconfig.read_settings(client)
-        display = international_display(sender_number, location.country_code, location.area_code)
+        display = printed_number(shown, sender_number, (location.country_code, location.area_code))
     except BoxError:
-        display = sender_number
+        display = printed_number(shown, sender_number, None)
     doc = _document(args, s)
     prepared = jobmod.prepare(doc, sender_name=sender_name, sender_number=sender_number, display_number=display)
     for d in destinations:
@@ -238,7 +247,7 @@ def cmd_status(args, s):
 
 def cmd_precheck(args, s):
     try:
-        destinations = parse_destinations(",".join(args.to), s.country_code)
+        destinations = resolve(",".join(args.to), s.country_code, AddressBook(country_code=s.country_code))
     except InvalidNumber as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_USAGE
@@ -331,7 +340,15 @@ def cmd_log(args, s):
                 print(f"  open:      {problem}")
         print(f"report:      {e.report_pdf or '-'}")
         return EXIT_OK
-    entries = list(reversed(log.entries(args.limit)))
+    book = AddressBook(country_code=s.country_code)
+    wanted = None
+    if args.to:  # a name (part) from the address book or a number
+        wanted = {c.dial for c in book.contacts(args.to)}
+        try:
+            wanted.add(normalize_number(args.to, s.country_code))
+        except InvalidNumber:
+            pass
+    entries = list(reversed(log.entries(args.limit, destinations=wanted)))
     if args.json:
         import json
 
@@ -342,10 +359,43 @@ def cmd_log(args, s):
         files = ", ".join(f.name for f in e.files)
         if e.subject and files:
             what = f"{e.subject} [{files}]"
+        name = book.name_for(e.destination)
+        to = f"{name} ({e.destination})" if name else e.destination
         print(f"{e.id:>5}  {_fmt_time(e.timestamp)}  {'OK    ' if e.ok else 'FAILED'}  {e.verdict or '-':10}  "
-              f"{e.destination:>16}  {e.pages} p  {what}")
+              f"{to:>16}  {e.pages} p  {what}")
     if not entries:
-        print("no faxes sent yet")
+        print(f"no faxes sent to {args.to}" if args.to else "no faxes sent yet")
+    return EXIT_OK
+
+
+def cmd_contacts(args, s):
+    book = AddressBook(country_code=s.country_code)
+    try:
+        if args.add:
+            c = book.add(args.add[0], args.add[1], args.note or "")
+            print(f"added {c.id}: {c.name}  {c.number}")
+            return EXIT_OK
+        if args.delete is not None:
+            book.delete(args.delete)
+            print(f"deleted {args.delete}")
+            return EXIT_OK
+    except (InvalidContact, InvalidNumber) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return EXIT_USAGE
+    except KeyError:
+        print(f"error: no address book entry {args.delete}", file=sys.stderr)
+        return EXIT_USAGE
+    contacts = book.contacts(args.search or "")
+    if args.json:
+        import json
+        from dataclasses import asdict
+
+        print(json.dumps([asdict(c) for c in contacts], ensure_ascii=False, indent=1))
+        return EXIT_OK
+    for c in contacts:
+        print(f"{c.id:>5}  {c.name:30}  {c.number:22}  {c.note}".rstrip())
+    if not contacts:
+        print(f"no address book entries for {args.search}" if args.search else "the address book is empty")
     return EXIT_OK
 
 
@@ -388,8 +438,12 @@ def cmd_selftest(args, s):
 
 def cmd_set_password(args, s):
     pw = sys.stdin.readline().rstrip("\n") if not sys.stdin.isatty() else getpass.getpass("Password: ")
-    config.set_password(s, pw)
-    print("password stored in the keyring")
+    if not pw:
+        raise SystemExit("an empty password is not saved")
+    where = config.set_password(s, pw)
+    path = config.save(s, args.config)
+    print("password saved in the system keyring" if where == "keyring" else
+          f"password saved in {path} (no usable system keyring; only your user account can read the file)")
     return EXIT_OK
 
 
@@ -413,6 +467,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--to-name", help="recipient name on the cover sheet")
         sp.add_argument("--from-name", help="sender name (header line, cover sheet)")
         sp.add_argument("--from-number", help="box fax number to send from")
+        sp.add_argument("--shown-number", help="fax number printed on the fax (header line, cover sheet) instead "
+                                               "of the sending one, e.g. where replies should go")
         sp.add_argument("--header-mode", choices=render.HEADER_MODES)
         sp.add_argument("--dither", choices=render.DITHER_MODES)
 
@@ -438,6 +494,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("log", help="local send log: when, to whom, which content")
     sp.add_argument("--limit", type=int, default=50)
     sp.add_argument("--show", type=int, metavar="ID", help="details of one entry")
+    sp.add_argument("--to", metavar="NAME_OR_NUMBER", help="only faxes to this number or address book name")
+    sp.add_argument("--json", action="store_true")
+    sp = sub.add_parser("contacts", help="address book: names and fax numbers (send --to NAME uses it)")
+    sp.add_argument("search", nargs="?", help="list only entries whose name, note or number contains this")
+    sp.add_argument("--add", nargs=2, metavar=("NAME", "NUMBER"), help="add an entry")
+    sp.add_argument("--note", help="note for --add")
+    sp.add_argument("--delete", type=int, metavar="ID", help="delete an entry")
     sp.add_argument("--json", action="store_true")
     sp = sub.add_parser("boxconfig", help="show or change the fax settings of the box")
     sp.add_argument("--identifier", help="station id (max 20 characters)")
@@ -448,14 +511,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--store-internal", action=argparse.BooleanOptionalAction, default=None)
     sp = sub.add_parser("trust", help="show and store the box certificate fingerprint")
     sp.add_argument("--yes", "-y", action="store_true")
-    sub.add_parser("set-password", help="store the box password in the system keyring")
+    sub.add_parser("set-password", help="save the box password (system keyring, else the settings file)")
     sp = sub.add_parser("selftest", help="check that fritzfax works on this system (no box needed)")
     sp.add_argument("--gui", action="store_true", help="also open the main window")
     return p
 
 
 COMMANDS = {"info": cmd_info, "send": cmd_send, "preview": cmd_preview, "status": cmd_status,
-            "precheck": cmd_precheck, "journal": cmd_journal, "log": cmd_log, "boxconfig": cmd_boxconfig, "trust": cmd_trust,
+            "precheck": cmd_precheck, "journal": cmd_journal, "log": cmd_log, "contacts": cmd_contacts, "boxconfig": cmd_boxconfig, "trust": cmd_trust,
             "set-password": cmd_set_password, "selftest": cmd_selftest}
 
 
@@ -475,10 +538,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}\n       office documents need LibreOffice: save the document as PDF, or install "
               "LibreOffice (the full fritzfax package brings it along)", file=sys.stderr)
         return EXIT_USAGE
-    except render.RenderError as exc:
+    except (render.RenderError, InvalidNumber) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_USAGE
-    except (BoxError, config.NoKeyring) as exc:
+    except BoxError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return EXIT_CONNECT
     except KeyboardInterrupt:

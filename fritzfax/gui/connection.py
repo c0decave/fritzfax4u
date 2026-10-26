@@ -72,15 +72,16 @@ def make_client(settings: config.Settings, parent: QWidget | None, ask: bool = T
                      timeout=settings.timeout)
 
 
-def store_pending_password(settings: config.Settings, parent: QWidget | None) -> None:
-    """The box accepted the typed password: now keep it in the keyring if the user asked for that."""
+def store_pending_password(settings: config.Settings, parent: QWidget | None, config_path=None) -> bool:
+    """The box accepted the typed password: now keep it if the user asked for that.
+
+    True: it was stored, and the settings must be saved (it may be in them, see config.set_password)."""
     if not settings.keyring_pending or not settings.password:
-        return
+        return False
     settings.keyring_pending = False
-    try:
-        config.set_password(settings, settings.password)
-    except Exception as exc:  # noqa: BLE001 - no or locked keyring: keep it for this session only
-        QMessageBox.information(parent, tr("Password"), keyring_failed(exc))
+    if config.set_password(settings, settings.password) == "file":
+        QMessageBox.information(parent, tr("Password"), saved_in_file(config_path))
+    return True
 
 
 def forget_rejected_password(settings: config.Settings) -> None:
@@ -93,20 +94,20 @@ def describe_number_error(exc) -> str:
     """A translated message for numbers.InvalidNumber."""
     if exc.kind == "empty":
         return tr("Please enter at least one fax number.")
+    if exc.kind == "ambiguous":
+        return tr("%1 has several numbers in the address book. Please enter the number.").replace("%1", exc.value)
     if exc.kind == "too_long":
         return tr("The number %1 is longer than 40 characters.").replace("%1", exc.value)
     return tr("Invalid number: %1").replace("%1", exc.value)
 
 
-def keyring_failed(exc: Exception) -> str:
-    if isinstance(exc, config.NoKeyring):
-        return tr("There is no system keyring. The password is used for this session only.")
-    return tr("The password could not be stored in the system keyring (%1). It is used for this session "
-              "only.").replace("%1", str(exc) or exc.__class__.__name__)
+def saved_in_file(config_path=None) -> str:
+    return tr("There is no usable system keyring, so the password is saved in the settings file %1. Only your "
+              "user account can read it.").replace("%1", str(config_path or config.default_path()))
 
 
 class PasswordDialog(QDialog):
-    """Password prompt with the choice to keep the password in the keyring."""
+    """Password prompt with the choice to keep the password (keyring, else settings file)."""
 
     def __init__(self, parent: QWidget | None, username: str):
         super().__init__(parent)
@@ -117,7 +118,7 @@ class PasswordDialog(QDialog):
         self.edit = QLineEdit()
         self.edit.setEchoMode(QLineEdit.EchoMode.Password)
         layout.addWidget(self.edit)
-        self.store_check = QCheckBox(tr("Store the password in the system keyring"))
+        self.store_check = QCheckBox(tr("Save the password"))
         self.store_check.setChecked(True)
         layout.addWidget(self.store_check)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -130,7 +131,7 @@ class PasswordDialog(QDialog):
 
 
 def ask_password(parent: QWidget | None, username: str) -> tuple[str, bool] | None:
-    """(password, store in keyring) or None when cancelled."""
+    """(password, keep it) or None when cancelled."""
     dlg = PasswordDialog(parent, username)
     return dlg.values() if dlg.exec() == QDialog.DialogCode.Accepted else None
 

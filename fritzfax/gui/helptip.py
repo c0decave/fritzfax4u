@@ -54,9 +54,9 @@ def _templates() -> dict[str, str]:
                       "https://fritz.box. fritzfax has no built-in address."),
         "username": tr("The FRITZ!Box user fritzfax logs in with. Leave it empty if your box only asks for a "
                        "password; then the user last logged in at the box is used."),
-        "keyring": tr("Keeps the password in the password storage of your desktop (keyring), so you do not "
-                      "have to type it again. Without it, the password is asked for once per session. It is "
-                      "never written into the settings file."),
+        "keyring": tr("Keeps the password so you do not have to type it again: in the password storage of "
+                      "your desktop (keyring), or, where there is none, in the settings file, which only your "
+                      "user account can read. Without the tick the password is asked for once per session."),
         "certificate": tr("The FRITZ!Box uses its own (self-signed) certificate. When you trust it once, "
                           "fritzfax remembers its SHA-256 fingerprint and refuses to connect if it ever "
                           "changes - a protection against someone listening in between. You can compare it "
@@ -68,6 +68,11 @@ def _templates() -> dict[str, str]:
                           "the cover sheet. You can change it for a single fax in the main window."),
         "sender_number": tr("The fax number of your box that faxes are sent from. Leave it empty to use the "
                             "first fax number set up in the box."),
+        "shown_number": tr("The fax number printed on your faxes (header line and cover sheet), for example the "
+                           "number replies should go to. Leave it empty to print the number the fax is sent "
+                           "from. It is only printed: the caller number the recipient's line shows is the one "
+                           "the box sends from, and the station id is a setting of the box (tab 'Box fax "
+                           "settings')."),
         "country_code": tr("Your country's dialing code, written with + (+49 for Germany). A number entered "
                            "as +49... is dialed as 0..., any other +... number with 00 in front."),
         # settings: sending

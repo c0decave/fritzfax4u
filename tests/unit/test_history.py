@@ -175,3 +175,27 @@ def test_database_connections_are_closed(tmp_path, monkeypatch):
     for con in opened:
         with pytest.raises(sqlite3.ProgrammingError):  # closed
             con.execute("SELECT 1")
+
+
+# --- the send log per recipient (operator 2026-10-26) -------------------------------------------------
+
+def test_entries_to_one_recipient(tmp_path):
+    log = history.History(tmp_path / "h.db", tmp_path / "sent")
+    p = pages(1)
+    job = log.start_job(content(), p, sff.encode_pages(p))
+    for dest in ("0301", "0402", "0301"):
+        log.record(job, dest, True, "", 0)
+    assert [e.destination for e in log.entries(destinations=["0301"])] == ["0301", "0301"]
+    assert log.entries(destinations=[]) == []  # nobody asked for: nothing, not everything
+    assert len(log.entries()) == 3
+
+
+@pytest.mark.skipif(__import__("os").name != "posix", reason="mode bits")
+def test_the_send_log_is_private(tmp_path):
+    import os
+
+    log = history.History(tmp_path / "data" / "h.db", tmp_path / "data" / "sent")
+    p = pages(1)
+    log.record(log.start_job(content(), p, sff.encode_pages(p)), "0301", True, "", 0)
+    for path in (tmp_path / "data", tmp_path / "data" / "sent", tmp_path / "data" / "h.db"):
+        assert os.stat(path).st_mode & 0o077 == 0, path

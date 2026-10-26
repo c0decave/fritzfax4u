@@ -456,3 +456,122 @@ def test_info_without_box_location_shows_the_plain_number(env, capsys, monkeypat
     box, conf = env
     assert run(conf, "info") == 0
     assert "fax numbers:    12345678\n" in capsys.readouterr().out
+
+
+# --- set-password without a keyring (operator 2026-10-26) ------------------------------------------------
+
+def test_set_password_without_keyring_saves_it_in_the_settings_file(tmp_path, monkeypatch, capsys):
+    import io
+
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    conf = tmp_path / "f.conf"
+    monkeypatch.setattr(sys, "stdin", io.StringIO("secret-pw\n"))
+    assert run(conf, "--url", "https://fritz.box", "--user", "u", "set-password") == cli.EXIT_OK
+    assert str(conf) in capsys.readouterr().out
+    s = config.load(conf)
+    assert "secret-pw" not in conf.read_text() and config.get_password(s) == "secret-pw"
+
+
+def test_set_password_refuses_an_empty_password(tmp_path, monkeypatch):
+    import io
+
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    monkeypatch.setattr(sys, "stdin", io.StringIO("\n"))
+    with pytest.raises(SystemExit):
+        run(tmp_path / "f.conf", "--url", "https://fritz.box", "set-password")
+    assert not (tmp_path / "f.conf").exists()
+
+
+# --- the fax number printed on the fax ---------------------------------------------------------------
+
+def _capture_prepare(monkeypatch):
+    seen = {}
+    real = cli.jobmod.prepare
+
+    def prepare(doc, **kw):
+        seen["display"] = kw.get("display_number")
+        seen["cover"] = doc.cover.from_number if doc.cover else None
+        return real(doc, **kw)
+
+    monkeypatch.setattr(cli.jobmod, "prepare", prepare)
+    return seen
+
+
+def test_send_prints_the_chosen_fax_number(env, tmp_path, monkeypatch):
+    box, conf = env
+    seen = _capture_prepare(monkeypatch)
+    pdf = one_page_pdf(tmp_path / "a.pdf")
+    assert run(conf, "send", "--to", "0301", "--yes", "--cover", "--shown-number", "+49 40 999999", str(pdf)) == 0
+    assert seen == {"display": "+49 40 999999", "cover": "+49 40 999999"}
+    assert box.state.runs  # sent from the box's own number all the same
+
+
+def test_send_takes_the_fax_number_from_the_settings(env, tmp_path, monkeypatch):
+    box, conf = env
+    s = config.load(conf)
+    s.shown_number = "+49 40 777777"
+    config.save(s, conf)
+    seen = _capture_prepare(monkeypatch)
+    assert run(conf, "send", "--to", "0301", "--yes", str(one_page_pdf(tmp_path / "a.pdf"))) == 0
+    assert seen["display"] == "+49 40 777777"
+
+
+def test_send_refuses_a_fax_number_that_is_no_number(env, tmp_path):
+    box, conf = env
+    assert run(conf, "send", "--to", "0301", "--yes", "--shown-number", "call me",
+               str(one_page_pdf(tmp_path / "a.pdf"))) == cli.EXIT_USAGE
+    assert not box.state.runs
+
+
+# --- address book and the send log per recipient (operator 2026-10-26) ----------------------------------
+
+def test_contacts_add_list_search_delete(tmp_path, capsys):
+    conf = tmp_path / "f.conf"
+    assert run(conf, "contacts", "--add", "Muster GmbH", "0531 49059113", "--note", "Buchhaltung") == 0
+    assert run(conf, "contacts", "--add", "Amt", "+49 30 1234567") == 0
+    capsys.readouterr()
+    assert run(conf, "contacts") == 0
+    out = capsys.readouterr().out
+    assert out.index("Amt") < out.index("Muster GmbH") and "Buchhaltung" in out
+    assert run(conf, "contacts", "muster") == 0
+    out = capsys.readouterr().out
+    assert "Muster GmbH" in out and "Amt" not in out
+    from fritzfax.core.addressbook import AddressBook
+
+    (amt,) = AddressBook().contacts("Amt")
+    assert run(conf, "contacts", "--delete", str(amt.id)) == 0
+    assert [c.name for c in AddressBook().contacts()] == ["Muster GmbH"]
+
+
+def test_contacts_refuse_bad_entries(tmp_path, capsys):
+    conf = tmp_path / "f.conf"
+    assert run(conf, "contacts", "--add", "Amt", "kein Fax") == cli.EXIT_USAGE
+    assert run(conf, "contacts", "--add", " ", "030 1") == cli.EXIT_USAGE
+    assert run(conf, "contacts", "--add", "Amt", "030 1") == 0
+    assert run(conf, "contacts", "--add", "amt", "030 1") == cli.EXIT_USAGE  # already there
+    assert run(conf, "contacts", "--delete", "999") == cli.EXIT_USAGE
+    assert "error" in capsys.readouterr().err
+
+
+def test_send_to_a_name_from_the_address_book_and_log_per_recipient(env, tmp_path, capsys):
+    box, conf = env
+    pdf = str(one_page_pdf(tmp_path / "a.pdf"))
+    assert run(conf, "contacts", "--add", "Muster GmbH", "0301") == 0
+    assert run(conf, "send", "--to", "muster gmbh", "--yes", pdf) == 0
+    assert run(conf, "send", "--to", "0402", "--yes", pdf) == 0
+    capsys.readouterr()
+    assert run(conf, "log", "--to", "Muster") == 0
+    out = capsys.readouterr().out
+    assert "Muster GmbH" in out and "0402" not in out and out.count("\n") == 1
+    assert run(conf, "log", "--to", "040 2") == 0
+    out = capsys.readouterr().out
+    assert "0402" in out and "Muster" not in out
+    assert run(conf, "log", "--to", "Unbekannt") == 0
+    assert "no faxes sent to Unbekannt" in capsys.readouterr().out
+
+
+def test_send_to_an_unknown_name_is_refused(env, tmp_path, capsys):
+    box, conf = env
+    assert run(conf, "send", "--to", "Unbekannt", "--yes", str(one_page_pdf(tmp_path / "a.pdf"))) == cli.EXIT_USAGE
+    assert not box.state.runs

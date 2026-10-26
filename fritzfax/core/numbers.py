@@ -8,6 +8,7 @@ _SEPARATORS = re.compile(r"[,;\n\r]+")
 _DECORATION = re.compile(r"[\s/\-().]")
 _VALID = re.compile(r"^[0-9*#]+$")
 _TRUNK_ZERO = re.compile(r"\(\s*0\s*\)")  # "(0)" in "+49 (0)30 ..."
+_SHOWN = re.compile(r"^\+?[0-9 ()/\-.]+$")
 
 
 class InvalidNumber(ValueError):
@@ -94,3 +95,23 @@ def international_display(number: str, country: str, area: str) -> str:
     if number.startswith("0"):
         return f"+{country} {number[1:]}"
     return f"+{country} {area} {number}" if area else f"+{country} {number}"
+
+
+def shown_number(raw: str) -> str:
+    """The fax number to print on the fax instead of the sending one, tidied; "" = none chosen.
+
+    It may differ from the number the box sends from, e.g. the number replies should go to. It is only
+    printed (header line, cover sheet), never dialed, so it keeps the way it was written."""
+    text = " ".join(raw.split())
+    if not text:
+        return ""
+    if len(text) > MAX_LEN:
+        raise InvalidNumber(f"{text!r} is longer than {MAX_LEN} characters", "too_long", text)
+    if not _SHOWN.match(text) or sum(c.isdigit() for c in text) < 3:
+        raise InvalidNumber(f"{text!r} is not a fax number", "invalid", text)
+    return text
+
+
+def printed_number(shown: str, sender_number: str, location: tuple[str, str] | None) -> str:
+    """The fax number printed on the fax: the chosen one, else the sending number (international when known)."""
+    return shown or box_number_display(sender_number, location)

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -146,14 +147,21 @@ class JournalDialog(QDialog):
 class HistoryDialog(QDialog):
     """Local send log: when, to whom, which content, result."""
 
-    def __init__(self, history: History, parent=None):
+    def __init__(self, history: History, parent=None, book=None, destinations=None):
+        """book: the address book, for the names of the recipients; destinations: only faxes to these."""
         super().__init__(parent)
+        self.book = book
         self.setWindowTitle(self.tr("Send log"))
         self.resize(980, 480)
         layout = QVBoxLayout(self)
-        self.entries = list(reversed(history.entries()))
+        self.filter_edit = QLineEdit()
+        self.filter_edit.setPlaceholderText(self.tr("Filter: recipient, number, content"))
+        self.filter_edit.setClearButtonEnabled(True)
+        self.filter_edit.textChanged.connect(self._apply_filter)
+        layout.addWidget(self.filter_edit)
+        self.entries = list(reversed(history.entries(destinations=destinations)))
         table = QTableWidget(len(self.entries), 8)
-        table.setHorizontalHeaderLabels([self.tr("Time"), self.tr("Number"), self.tr("Sender"), self.tr("Content"),
+        table.setHorizontalHeaderLabels([self.tr("Time"), self.tr("Recipient"), self.tr("Sender"), self.tr("Content"),
                                          self.tr("Pages"), self.tr("Result"), self.tr("Verification"),
                                          self.tr("Error")])
         verdicts = {"verified": self.tr("verified"), "unverified": self.tr("NOT verified"),
@@ -164,7 +172,7 @@ class HistoryDialog(QDialog):
         for r, e in enumerate(self.entries):
             files = ", ".join(f.name for f in e.files)
             what = " - ".join(x for x in (e.subject, files) if x) or modes.get(e.mode, e.mode)
-            vals = [time.strftime("%d.%m.%Y %H:%M", time.localtime(e.timestamp)), e.destination,
+            vals = [time.strftime("%d.%m.%Y %H:%M", time.localtime(e.timestamp)), self._recipient(e),
                     e.sender_name or e.sender_number, what, str(e.pages),
                     self.tr("OK") if e.ok else self.tr("failed"), verdicts.get(e.verdict, e.verdict),
                     e.error or "; ".join(connection.describe_problem(p) for p in e.verification.get("problems", []))]
@@ -186,6 +194,10 @@ class HistoryDialog(QDialog):
         self.report_button = QPushButton(self.tr("Open transmission report"))
         self.report_button.clicked.connect(self.open_report)
         row.addWidget(self.report_button)
+        if book is not None:
+            self.contact_button = QPushButton(self.tr("Save in address book..."))
+            self.contact_button.clicked.connect(self.save_contact)
+            row.addWidget(self.contact_button)
         row.addStretch(1)
         close = QPushButton(self.tr("Close"))
         close.clicked.connect(self.accept)
@@ -196,6 +208,29 @@ class HistoryDialog(QDialog):
     def selected(self):
         r = self.table.currentRow()
         return self.entries[r] if 0 <= r < len(self.entries) else None
+
+    def _recipient(self, e) -> str:
+        name = self.book.name_for(e.destination) if self.book is not None else ""
+        return f"{name} ({e.destination})" if name else e.destination
+
+    def _apply_filter(self, *_):
+        text = self.filter_edit.text().strip().casefold()
+        for r in range(self.table.rowCount()):
+            row_text = " ".join(self.table.item(r, c).text() for c in range(self.table.columnCount())
+                                if self.table.item(r, c)).casefold()
+            self.table.setRowHidden(r, bool(text) and text not in row_text)
+
+    def save_contact(self):
+        """Keep the recipient of the selected fax in the address book."""
+        from .addressbook_dialog import ContactDialog
+
+        e = self.selected()
+        if e is None or self.book is None:
+            return
+        if ContactDialog(self.book, self, number=e.destination).exec() == QDialog.DialogCode.Accepted:
+            for r, entry in enumerate(self.entries):
+                self.table.item(r, 1).setText(self._recipient(entry))
+            self._apply_filter()
 
     def _show_detail(self, row):
         if not 0 <= row < len(self.entries):

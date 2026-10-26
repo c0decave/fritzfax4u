@@ -2,6 +2,68 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de_DE" sourcelanguage="en_US">
 <context>
+    <name>AddressBook</name>
+    <message>
+        <source>Faxes sent to %1</source>
+        <translation>Gesendete Faxe an %1</translation>
+    </message>
+</context>
+<context>
+    <name>AddressBookDialog</name>
+    <message>
+        <source>Address book</source>
+        <translation>Adressbuch</translation>
+    </message>
+    <message>
+        <source>Search name, number or note</source>
+        <translation>Name, Nummer oder Notiz suchen</translation>
+    </message>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Fax number</source>
+        <translation>Faxnummer</translation>
+    </message>
+    <message>
+        <source>Note</source>
+        <translation>Notiz</translation>
+    </message>
+    <message>
+        <source>New...</source>
+        <translation>Neu...</translation>
+    </message>
+    <message>
+        <source>Edit...</source>
+        <translation>Bearbeiten...</translation>
+    </message>
+    <message>
+        <source>Delete...</source>
+        <translation>Löschen...</translation>
+    </message>
+    <message>
+        <source>Sent faxes...</source>
+        <translation>Gesendete Faxe...</translation>
+    </message>
+    <message>
+        <source>Fax to selected</source>
+        <translation>An Auswahl faxen</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Delete these entries from the address book?
+
+%1</source>
+        <translation>Diese Einträge aus dem Adressbuch löschen?
+
+%1</translation>
+    </message>
+</context>
+<context>
     <name>Celebration</name>
     <message>
         <source>Click to close</source>
@@ -31,6 +93,10 @@
         <translation>Bitte mindestens eine Faxnummer eingeben.</translation>
     </message>
     <message>
+        <source>%1 has several numbers in the address book. Please enter the number.</source>
+        <translation>%1 hat mehrere Nummern im Adressbuch. Bitte geben Sie die Nummer ein.</translation>
+    </message>
+    <message>
         <source>The number %1 is longer than 40 characters.</source>
         <translation>Die Nummer %1 ist länger als 40 Zeichen.</translation>
     </message>
@@ -39,12 +105,8 @@
         <translation>Ungültige Nummer: %1</translation>
     </message>
     <message>
-        <source>There is no system keyring. The password is used for this session only.</source>
-        <translation>Es gibt keinen System-Keyring. Das Passwort gilt nur für diese Session.</translation>
-    </message>
-    <message>
-        <source>The password could not be stored in the system keyring (%1). It is used for this session only.</source>
-        <translation>Das Passwort konnte nicht im System-Keyring gespeichert werden (%1). Es gilt nur für diese Session.</translation>
+        <source>There is no usable system keyring, so the password is saved in the settings file %1. Only your user account can read it.</source>
+        <translation>Es gibt keinen nutzbaren System-Keyring, deshalb wird das Passwort in der Einstellungsdatei %1 gespeichert. Nur Ihr Benutzerkonto kann sie lesen.</translation>
     </message>
     <message>
         <source>Password for the FRITZ!Box user %1:</source>
@@ -55,8 +117,8 @@
         <translation>(zuletzt angemeldeter User)</translation>
     </message>
     <message>
-        <source>Store the password in the system keyring</source>
-        <translation>Passwort im System-Keyring speichern</translation>
+        <source>Save the password</source>
+        <translation>Passwort speichern</translation>
     </message>
     <message>
         <source>Unknown certificate</source>
@@ -194,6 +256,49 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
     </message>
 </context>
 <context>
+    <name>ContactDialog</name>
+    <message>
+        <source>Edit entry</source>
+        <translation>Eintrag bearbeiten</translation>
+    </message>
+    <message>
+        <source>New entry</source>
+        <translation>Neuer Eintrag</translation>
+    </message>
+    <message>
+        <source>Name:</source>
+        <translation>Name:</translation>
+    </message>
+    <message>
+        <source>e.g. 0531 49059113</source>
+        <translation>z. B. 0531 49059113</translation>
+    </message>
+    <message>
+        <source>Fax number:</source>
+        <translation>Faxnummer:</translation>
+    </message>
+    <message>
+        <source>Note:</source>
+        <translation>Notiz:</translation>
+    </message>
+    <message>
+        <source>Please enter a name.</source>
+        <translation>Bitte geben Sie einen Namen ein.</translation>
+    </message>
+    <message>
+        <source>This name with this number is already in the address book.</source>
+        <translation>Dieser Name mit dieser Nummer steht schon im Adressbuch.</translation>
+    </message>
+    <message>
+        <source>Address book</source>
+        <translation>Adressbuch</translation>
+    </message>
+    <message>
+        <source>The entry does not exist any more.</source>
+        <translation>Den Eintrag gibt es nicht mehr.</translation>
+    </message>
+</context>
+<context>
     <name>Help</name>
     <message>
         <source>Document: the files you add are sent as they are, page by page - for example a signed PDF. Letter: fritzfax writes your text on the first page(s) and puts the files after it.</source>
@@ -216,8 +321,8 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
         <translation>Der FRITZ!Box-User, mit dem sich fritzfax anmeldet. Leer lassen, wenn Ihre Box nur ein Passwort verlangt; dann wird der zuletzt an der Box angemeldete User verwendet.</translation>
     </message>
     <message>
-        <source>Keeps the password in the password storage of your desktop (keyring), so you do not have to type it again. Without it, the password is asked for once per session. It is never written into the settings file.</source>
-        <translation>Legt das Passwort im Passwortspeicher Ihres Desktops (Keyring) ab, damit Sie es nicht erneut eingeben müssen. Ohne Keyring wird es einmal pro Session abgefragt. In die Einstellungsdatei wird es nie geschrieben.</translation>
+        <source>Keeps the password so you do not have to type it again: in the password storage of your desktop (keyring), or, where there is none, in the settings file, which only your user account can read. Without the tick the password is asked for once per session.</source>
+        <translation>Merkt sich das Passwort, damit Sie es nicht erneut eingeben müssen: im Passwortspeicher Ihres Desktops (Keyring) oder, wo es keinen gibt, in der Einstellungsdatei, die nur Ihr Benutzerkonto lesen kann. Ohne Haken wird das Passwort einmal pro Session abgefragt.</translation>
     </message>
     <message>
         <source>The FRITZ!Box uses its own (self-signed) certificate. When you trust it once, fritzfax remembers its SHA-256 fingerprint and refuses to connect if it ever changes - a protection against someone listening in between. You can compare it with the certificate your browser shows for the box.</source>
@@ -234,6 +339,10 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
     <message>
         <source>The fax number of your box that faxes are sent from. Leave it empty to use the first fax number set up in the box.</source>
         <translation>Die Faxnummer Ihrer Box, von der Faxe gesendet werden. Leer lassen, um die erste in der Box eingerichtete Faxnummer zu verwenden.</translation>
+    </message>
+    <message>
+        <source>The fax number printed on your faxes (header line and cover sheet), for example the number replies should go to. Leave it empty to print the number the fax is sent from. It is only printed: the caller number the recipient's line shows is the one the box sends from, and the station id is a setting of the box (tab 'Box fax settings').</source>
+        <translation>Die Faxnummer, die auf Ihre Faxe gedruckt wird (Header-Zeile und Deckblatt), zum Beispiel die Nummer für Antworten. Leer lassen, um die Nummer zu drucken, mit der gesendet wird. Sie wird nur gedruckt: Die Rufnummer, die beim Empfänger angezeigt wird, ist die, mit der die Box sendet, und die Faxkennung ist eine Einstellung der Box (Reiter „Fax-Einstellungen der Box“).</translation>
     </message>
     <message>
         <source>Your country's dialing code, written with + (+49 for Germany). A number entered as +49... is dialed as 0..., any other +... number with 00 in front.</source>
@@ -331,12 +440,16 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
         <translation>Sende-Log</translation>
     </message>
     <message>
+        <source>Filter: recipient, number, content</source>
+        <translation>Filter: Empfänger, Nummer, Inhalt</translation>
+    </message>
+    <message>
         <source>Time</source>
         <translation>Zeit</translation>
     </message>
     <message>
-        <source>Number</source>
-        <translation>Nummer</translation>
+        <source>Recipient</source>
+        <translation>Empfänger</translation>
     </message>
     <message>
         <source>Sender</source>
@@ -393,6 +506,10 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
     <message>
         <source>Open transmission report</source>
         <translation>Sendebericht öffnen</translation>
+    </message>
+    <message>
+        <source>Save in address book...</source>
+        <translation>Im Adressbuch speichern...</translation>
     </message>
     <message>
         <source>Close</source>
@@ -629,6 +746,10 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
         <translation>Dateien hinzufügen...</translation>
     </message>
     <message>
+        <source>Address book...</source>
+        <translation>Adressbuch...</translation>
+    </message>
+    <message>
         <source>Export preview...</source>
         <translation>Vorschau exportieren...</translation>
     </message>
@@ -673,12 +794,28 @@ Bitte mit dem Zertifikat im Web-Interface der Box vergleichen. Vertrauen?</trans
         <translation>Telefonbuch</translation>
     </message>
     <message>
+        <source>Address book</source>
+        <translation>Adressbuch</translation>
+    </message>
+    <message>
+        <source>More in the address book...</source>
+        <translation>Mehr im Adressbuch...</translation>
+    </message>
+    <message>
+        <source>Save recipient in address book...</source>
+        <translation>Empfänger im Adressbuch speichern...</translation>
+    </message>
+    <message>
         <source>Recent numbers</source>
         <translation>Letzte Nummern</translation>
     </message>
     <message>
-        <source>No phone book entries (connect to the box first)</source>
-        <translation>Keine Telefonbuch-Einträge (zuerst mit der Box verbinden)</translation>
+        <source>The phone books of the box appear here once connected</source>
+        <translation>Die Telefonbücher der Box erscheinen hier nach dem Verbinden</translation>
+    </message>
+    <message>
+        <source>The address book cannot be opened: %1</source>
+        <translation>Das Adressbuch kann nicht geöffnet werden: %1</translation>
     </message>
     <message>
         <source>Without area code the box asks for a confirmation (button on the box). Better dial with area code: %1</source>
@@ -996,8 +1133,8 @@ Sendet Faxe über eine AVM FRITZ!Box mit dem Protokoll ihres eigenen Web-Interfa
         <translation>Passwort:</translation>
     </message>
     <message>
-        <source>Store the password in the system keyring</source>
-        <translation>Passwort im System-Keyring speichern</translation>
+        <source>Save the password</source>
+        <translation>Passwort speichern</translation>
     </message>
     <message>
         <source>(not trusted yet)</source>
@@ -1030,6 +1167,14 @@ Sendet Faxe über eine AVM FRITZ!Box mit dem Protokoll ihres eigenen Web-Interfa
     <message>
         <source>Default sender number:</source>
         <translation>Standard-Absendernummer:</translation>
+    </message>
+    <message>
+        <source>empty = the number the fax is sent from</source>
+        <translation>leer = die Nummer, mit der gesendet wird</translation>
+    </message>
+    <message>
+        <source>Fax number on the fax:</source>
+        <translation>Faxnummer auf dem Fax:</translation>
     </message>
     <message>
         <source>Own country code:</source>
@@ -1266,6 +1411,10 @@ Sendet Faxe über eine AVM FRITZ!Box mit dem Protokoll ihres eigenen Web-Interfa
     <message>
         <source>"%1" is not a country code. Enter it with +, for example +49 for Germany or +43 for Austria.</source>
         <translation>„%1" ist keine Ländervorwahl. Geben Sie sie mit + ein, zum Beispiel +49 für Deutschland oder +43 für Österreich.</translation>
+    </message>
+    <message>
+        <source>Fax number on the fax</source>
+        <translation>Faxnummer auf dem Fax</translation>
     </message>
     <message>
         <source>Password</source>

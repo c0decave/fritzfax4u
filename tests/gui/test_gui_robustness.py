@@ -167,7 +167,37 @@ def test_settings_save_survives_a_refusing_keyring(qtbot, tmp_path, monkeypatch,
     dlg.password_edit.setText("pw")
     dlg.save()
     assert conf.exists() and dlg.result() == QDialogCode.Accepted
-    assert any("keyring" in t.lower() for _, _, t in shown)
+    assert any("keyring" in t.lower() and str(conf) in t for _, _, t in shown)  # says where it went
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    assert config.get_password(config.load(conf)) == "pw"  # kept in the settings file instead
+
+
+def test_settings_without_keyring_save_the_password_in_the_file(qtbot, tmp_path, monkeypatch, shown):
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    conf = tmp_path / "f.conf"
+    dlg = SettingsDialog(config.Settings(box_url="https://fritz.box", username="u"), None, conf)
+    qtbot.addWidget(dlg)
+    dlg.password_edit.setText("pw")
+    dlg.save()
+    assert config.get_password(config.load(conf)) == "pw"
+    assert any(str(conf) in t for _, _, t in shown)
+
+
+def test_unticked_save_removes_the_password_from_the_file(qtbot, tmp_path, monkeypatch, shown):
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    conf = tmp_path / "f.conf"
+    s = config.Settings(box_url="https://fritz.box", username="u")
+    config.set_password(s, "old")
+    config.save(s, conf)
+    s = config.load(conf)
+    dlg = SettingsDialog(s, None, conf)
+    qtbot.addWidget(dlg)
+    dlg.password_edit.setText("new")
+    dlg.keyring_check.setChecked(False)
+    dlg.save()
+    assert "password" not in conf.read_text() and s.password == "new"
 
 
 class QDialogCode:
@@ -183,8 +213,22 @@ def test_password_prompt_stores_only_when_asked_to(qtbot, tmp_path, monkeypatch,
     client = connection.make_client(s, None)
     assert client is not None and s.password == "typed-pw"
     assert kr.stored == []  # nothing is stored before the box accepted the password
-    connection.store_pending_password(s, None)  # what a successful login does
+    assert connection.store_pending_password(s, None) is store  # what a successful login does
     assert bool(kr.stored) is store
+
+
+@pytest.mark.parametrize("store", [True, False])
+def test_password_prompt_without_keyring_keeps_it_for_the_next_start(qtbot, tmp_path, monkeypatch, shown, store):
+    monkeypatch.delenv("FRITZFAX_PASSWORD", raising=False)
+    monkeypatch.setattr(config, "_keyring", lambda: None)
+    monkeypatch.setattr(connection, "ask_password", lambda parent, user: ("typed-pw", store))
+    conf = tmp_path / "f.conf"
+    s = config.Settings(box_url="http://192.0.2.1", username="u")
+    assert connection.make_client(s, None) is not None
+    assert s.saved_password == ""  # nothing is kept before the box accepted the password
+    assert connection.store_pending_password(s, None) is store
+    config.save(s, conf)  # what the main window does when store_pending_password() says so
+    assert (config.get_password(config.load(conf)) == "typed-pw") is store
 
 
 def test_password_prompt_cancelled(qtbot, monkeypatch):
@@ -347,3 +391,40 @@ def test_export_without_extension_writes_a_pdf(qtbot, tmp_path, monkeypatch, sho
     w.export_preview()
     assert target.read_bytes().startswith(b"%PDF")
     assert not shown
+
+
+# --- the fax number printed on the fax (operator 2026-10-26) ---------------------------------------------
+
+def test_settings_keep_the_fax_number_printed_on_the_fax(qtbot, tmp_path, shown):
+    conf = tmp_path / "f.conf"
+    s = config.Settings()
+    dlg = SettingsDialog(s, None, conf)
+    qtbot.addWidget(dlg)
+    dlg.shown_number_edit.setText("  +49 40   999999 ")
+    dlg.save()
+    assert s.shown_number == "+49 40 999999" and config.load(conf).shown_number == "+49 40 999999"
+
+
+def test_settings_refuse_a_printed_fax_number_that_is_no_number(qtbot, tmp_path, shown):
+    s = config.Settings()
+    dlg = SettingsDialog(s, None, tmp_path / "f.conf")
+    qtbot.addWidget(dlg)
+    dlg.tabs.setCurrentIndex(0)
+    dlg.shown_number_edit.setText("call me")
+    dlg.save()
+    assert dlg.result() != QDialogCode.Accepted and s.shown_number == ""
+    assert any(k == "warning" and "call me" in t for k, _, t in shown)
+    assert dlg.tabs.currentWidget().isAncestorOf(dlg.shown_number_edit)  # the user sees the field
+
+
+def test_window_prints_the_chosen_fax_number_in_header_and_cover(qtbot, tmp_path):
+    s = config.Settings(sender_number="87654321", shown_number="+49 40 999999")
+    w = MainWindow(s, tmp_path / "f.conf")
+    qtbot.addWidget(w)
+    w.box_location = ("49", "30")
+    assert w.header_number() == "+49 40 999999"
+    w.cover_check.setChecked(True)
+    assert w.build_document().cover.from_number == "+49 40 999999"
+    s.shown_number = ""
+    assert w.header_number() == "+49 30 87654321"  # without one: the sending number, as before
+    assert w.build_document().cover.from_number == "+49 30 87654321"

@@ -112,8 +112,10 @@ class History:
         self.db_path = Path(db_path or default_db)
         self.sff_dir = Path(sff_dir or default_dir)
         self.text_log = self.db_path.parent / "send.log"
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.sff_dir.mkdir(parents=True, exist_ok=True)
+        paths.private_dir(self.db_path.parent)  # sent faxes and to whom: only for the own user
+        paths.private_dir(self.sff_dir)
+        paths.private_file(self.db_path)
+        paths.private_file(self.text_log)
         self._jobs: dict[str, tuple[Content, int, str, str]] = {}
         with self._db() as db:
             db.execute("CREATE TABLE IF NOT EXISTS sends (id INTEGER PRIMARY KEY, ts REAL, destination TEXT, "
@@ -189,10 +191,16 @@ class History:
                      r[15] or "", bool(r[16]), files, r[18] or "", json.loads(r[19]) if r[19] else {},
                      r[20] or "")
 
-    def entries(self, limit: int = 200) -> list[Entry]:
-        """The newest `limit` entries, oldest first."""
+    def entries(self, limit: int = 200, destinations=None) -> list[Entry]:
+        """The newest `limit` entries, oldest first; only those to `destinations` (dialed form) if given."""
+        where, args = "", ()
+        if destinations is not None:
+            wanted = sorted(set(destinations))
+            if not wanted:
+                return []
+            where, args = f" WHERE destination IN ({', '.join('?' * len(wanted))})", tuple(wanted)
         with self._db() as db:
-            rows = db.execute(self._SELECT + " ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+            rows = db.execute(self._SELECT + where + " ORDER BY id DESC LIMIT ?", (*args, limit)).fetchall()
         return [self._entry(r) for r in reversed(rows)]
 
     def get(self, entry_id: int) -> Entry:
